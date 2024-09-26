@@ -3,7 +3,7 @@
 import { Gantt, Task, ViewMode } from "gantt-task-react";
 import React, { useEffect, useState } from "react";
 import { Wbs } from "@/types/Wbs";
-import { DateType, DateTypeSelector } from "./DateTypeSelector";
+import { DateType, DateTypeSelector } from "./DateTypeButton";
 import { ViewModeButtons } from "./viewModeButton";
 
 interface CustomTask extends Task { 
@@ -22,7 +22,8 @@ const fetchTasks = async (): Promise<Wbs[]> => {
 }
 
 const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
-  return wbsTasks.map(wbsTask => {
+
+  const tasks = wbsTasks.map(wbsTask => {
     let start: Date, end: Date
     let kosu: number
     switch (dateType) {
@@ -51,14 +52,57 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
       type: 'task',
       isDisabled: false,
       styles: { progressColor: '#0080ff', progressSelectedColor: '#0080ff' },
-      project: wbsTask.projectName,
-      phase: wbsTask.phase,
-      activity: wbsTask.activity,
+      project: wbsTask.phase,
+      // phase: wbsTask.phase,
+      // activity: wbsTask.activity,
       wbsId: wbsTask.wbsId,
       tanto: wbsTask.tanto,
       kosu: kosu
-    }
+    } as CustomTask
   })
+
+  // projectを作成
+  // interface PhaseData {
+  //   phase: string;
+  //   kijunStartDate: string | null;
+  //   jissekiEndDate: string | null;
+  // }
+
+  const projects = wbsTasks.reduce((acc: { [phase: string]: CustomTask }, wbsTask: Wbs) => {
+
+    const phase = wbsTask.phase;
+
+    if (!acc[phase]) {
+      acc[phase] = {
+        id: wbsTask.phase,
+        name: wbsTask.phase,
+        wbsId: "",
+        tanto: "",
+        progress: 0,
+        type: "project",
+        start: new Date(wbsTask.kijunStartDate),
+        end: new Date(wbsTask.kijunEndDate),
+        kosu: wbsTask.kijunKosu,
+        hideChildren: false,
+        isDisabled: false,
+      };
+    } else {
+      if (wbsTask.kijunEndDate) {
+        if (
+          !acc[phase].end ||
+          new Date(wbsTask.kijunEndDate) > acc[phase].end
+        ) {
+          acc[phase].end = new Date(wbsTask.kijunEndDate);
+        }
+      }
+    }
+
+    return acc;
+  }, {});
+
+  console.log(projects);
+
+  return tasks.concat(Object.values(projects));
 }
 
 export default function GanttChart({ projectId }: { projectId: string }) {
@@ -147,7 +191,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
     tasks: CustomTask[];
     selectedTaskId: string;
     setSelectedTask: (taskId: string) => void;
-    onExpanderClick: (task: Task) => void;
+    onExpanderClick: (task: CustomTask) => void;
   }> = ({ tasks, rowHeight }) => {
     return (
       <div>
@@ -158,6 +202,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
             style={{ height: rowHeight }}
           >
             <div className="truncate" style={{ width: columnWidths.task }}>
+            <input type="buttom">▼</input>
               {task.name}
             </div>
             <div style={{ width: columnWidths.wbsId }}>{task.wbsId}</div>
@@ -176,6 +221,11 @@ export default function GanttChart({ projectId }: { projectId: string }) {
         ))}
       </div>
     );
+  };
+
+  const handleExpanderClick = (task: Task) => {
+    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
+    console.log("On expander click Id:" + task.id);
   };
 
   if (isLoading) {
@@ -206,6 +256,9 @@ export default function GanttChart({ projectId }: { projectId: string }) {
           tasks={tasks}
           viewMode={viewMode}
           columnWidth={60}
+          ganttHeight={0}
+          barFill={100}
+          preStepsCount={10}
           locale="ja-JP"
           TaskListHeader={TaskListHeader}
           TaskListTable={TaskListTable}
