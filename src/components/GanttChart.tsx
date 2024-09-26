@@ -2,11 +2,14 @@
 
 import { Gantt, Task, ViewMode } from "gantt-task-react";
 import React, { useEffect, useState } from "react";
-import "gantt-task-react/dist/index.css";
 import { Wbs } from "@/types/Wbs";
+import { DateType, DateTypeSelector } from "./DateTypeSelector";
+import { ViewModeButtons } from "./viewModeButton";
 
 interface CustomTask extends Task { 
   wbsId: string;
+  tanto: string;
+  kosu: number;
 }
 
 const fetchTasks = async (): Promise<Wbs[]> => {
@@ -18,32 +21,61 @@ const fetchTasks = async (): Promise<Wbs[]> => {
   return response.json()
 }
 
-const transformTasks = (wbsTasks: Wbs[]): CustomTask[] => {
-  return wbsTasks.map(apiTask => ({
-    id: apiTask.id.toString(),
-    name: apiTask.task,
-    start: new Date(apiTask.yoteiStartDate),
-    end: new Date(apiTask.yoteiEndDate),
-    progress: apiTask.progress_Rate,
-    type: 'task',
-    isDisabled: false,
-    styles: { progressColor: '#0080ff', progressSelectedColor: '#0080ff' },
-    wbsId: apiTask.wbsId,
-  }))
+const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
+  return wbsTasks.map(wbsTask => {
+    let start: Date, end: Date
+    let kosu: number
+    switch (dateType) {
+      case 'kijun':
+        start = new Date(wbsTask.kijunStartDate)
+        end = new Date(wbsTask.kijunEndDate)
+        kosu = wbsTask.kijunKosu
+        break
+      case 'yotei':
+        start = new Date(wbsTask.yoteiStartDate)
+        end = new Date(wbsTask.yoteiEndDate)
+        kosu = wbsTask.yoteiKosu
+        break
+      case 'jisseki':
+        start = wbsTask.jissekiStartDate ? new Date(wbsTask.jissekiStartDate) : new Date(wbsTask.yoteiStartDate)
+        end = wbsTask.jissekiEndDate ? new Date(wbsTask.jissekiEndDate) : new Date(wbsTask.yoteiEndDate)
+        kosu = wbsTask.jissekiKosu
+        break
+    }
+    return {
+      id: wbsTask.id.toString(),
+      name: wbsTask.task,
+      start,
+      end,
+      progress: wbsTask.progress_Rate,
+      type: 'task',
+      isDisabled: false,
+      styles: { progressColor: '#0080ff', progressSelectedColor: '#0080ff' },
+      project: wbsTask.projectName,
+      phase: wbsTask.phase,
+      activity: wbsTask.activity,
+      wbsId: wbsTask.wbsId,
+      tanto: wbsTask.tanto,
+      kosu: kosu
+    }
+  })
 }
 
-export default function GanttChart() {
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export default function GanttChart({ projectId }: { projectId: string }) {
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
+  const [dateType, setDateType] = useState<DateType>("yotei");
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [apiTasks, setApiTasks] = useState<Wbs[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadTasks = async () => {
       try {
         setIsLoading(true);
         const apiTasks = await fetchTasks();
-        const transformedTasks = transformTasks(apiTasks);
+        setApiTasks(apiTasks);
+        const transformedTasks = transformTasks(apiTasks, dateType);
         setTasks(transformedTasks);
         setError(null);
       } catch (error) {
@@ -56,36 +88,13 @@ export default function GanttChart() {
 
     loadTasks();
   }, []);
-  
-  // const tasks: Task[] = [
-  //   {
-  //     start: new Date(2023, 0, 1),
-  //     end: new Date(2023, 0, 15),
-  //     name: "企画立案",
-  //     id: "Task 1",
-  //     type: "task",
-  //     progress: 45,
-  //     isDisabled: false,
-  //   },
-  //   {
-  //     start: new Date(2023, 0, 10),
-  //     end: new Date(2023, 1, 5),
-  //     name: "デザイン作成",
-  //     id: "Task 2",
-  //     type: "task",
-  //     progress: 30,
-  //     isDisabled: false,
-  //   },
-  //   {
-  //     start: new Date(2023, 1, 1),
-  //     end: new Date(2023, 1, 20),
-  //     name: "開発",
-  //     id: "Task 3",
-  //     type: "task",
-  //     progress: 0,
-  //     isDisabled: false,
-  //   },
-  // ];
+
+  useEffect(() => {
+    if (apiTasks.length > 0) {
+      const transformedTasks = transformTasks(apiTasks, dateType);
+      setTasks(transformedTasks);
+    }
+  }, [dateType, apiTasks]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("ja-JP", {
@@ -95,24 +104,36 @@ export default function GanttChart() {
     });
   };
 
+  const columnWidths = { 
+    task: "200px",
+    wbsId: "60px",
+    tanto: "60px",
+    start: "60px",
+    end: "60px",
+    progress: "30px",
+    kosu: "10px",
+  };
+
   const TaskListHeader: React.FC<{
     headerHeight: number;
     rowWidth: string;
     fontFamily: string;
     fontSize: string;
-  }> = ({headerHeight}) => {
+  }> = ({ headerHeight }) => {
     return (
       <div
         className="flex justify-center items-center gap-4 px-4 bg-gray-100 font-semibold text-sm text-gray-700"
         style={{ height: headerHeight }}
       >
-        <div style={{ width: "200px" }}>タスク名</div>
-        <div style={{ width: "60px" }}>WBSNO</div>
-        <div style={{ width: "60px" }}>開始日</div>
-        <div style={{ width: "60px" }}>終了日</div>
-        <div className="text-right" style={{ width: "30px" }}>
+        <div style={{ width: columnWidths.task }}>タスク名</div>
+        <div style={{ width: columnWidths.wbsId }}>WBSNO</div>
+        <div style={{ width: columnWidths.tanto }}>担当者</div>
+        <div style={{ width: columnWidths.start }}>開始日</div>
+        <div style={{ width: columnWidths.end }}>終了日</div>
+        <div className="text-right" style={{ width: columnWidths.progress }}>
           進捗
         </div>
+        <div style={{ width: columnWidths.kosu }}>工数</div>
       </div>
     );
   };
@@ -134,86 +155,57 @@ export default function GanttChart() {
           <div
             key={task.id}
             className="flex items-center gap-4 px-4 py-2 border-b border-gray-200 text-sm"
-            style={{height: rowHeight }}
+            style={{ height: rowHeight }}
           >
-            <div
-              className="truncate"
-              style={{ width: "200px"}}
-            >
+            <div className="truncate" style={{ width: columnWidths.task }}>
               {task.name}
             </div>
-            <div>
-              {task.wbsId}
+            <div style={{ width: columnWidths.wbsId }}>{task.wbsId}</div>
+            <div style={{ width: columnWidths.tanto }}>{task.tanto}</div>
+            <div style={{ width: columnWidths.start }}>
+              {task.start.toLocaleDateString("ja-JP")}
             </div>
-            <div style={{ width: "60px" }}>
-              {task.start.toLocaleDateString("ja-JP", )}
+            <div style={{ width: columnWidths.end }}>
+              {task.end.toLocaleDateString("ja-JP")}
             </div>
-            <div style={{ width: "60px" }}>
-              {task.end.toLocaleDateString("ja-JP", )}
-            </div>
-            <div
-              className="text-right"
-              style={{ width: "30px"}}
-            >
+            <div className="text-right" style={{ width: columnWidths.progress }}>
               {task.progress}%
             </div>
+            <div style={{ width: columnWidths.kosu }}>{task.kosu}</div>
           </div>
         ))}
       </div>
     );
-  }
-
-  const ViewModeButtons: React.FC = () => {
-    const buttons = [
-      { mode: ViewMode.Hour, label: '時間' },
-      { mode: ViewMode.QuarterDay, label: '6時間' },
-      { mode: ViewMode.HalfDay, label: '12時間' },
-      { mode: ViewMode.Day, label: '日' },
-      { mode: ViewMode.Week, label: '週' },
-      { mode: ViewMode.Month, label: '月' },
-      { mode: ViewMode.Year, label: '年' },
-    ]
-
-    return (
-      <div className="flex space-x-2 mb-4">
-        {buttons.map(({ mode, label }) => (
-          <button
-            key={mode}
-            onClick={() => setViewMode(mode)}
-            className={`px-3 py-1 text-sm font-medium rounded-md ${
-              viewMode === mode
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            aria-pressed={viewMode === mode}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    )
-  }
+  };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">読み込み中...</div>
+    return (
+      <div className="flex justify-center items-center h-screen">
+        読み込み中...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>
+    return (
+      <div className="flex justify-center items-center h-screen text-red-500">
+        {error}
+      </div>
+    );
   }
 
   return (
     <div className="w-full h-screen p-4 bg-gray-100 font-sans">
       <h1 className="text-2xl font-bold mb-4 text-gray-800">
-        ガントチャート例
+        {projectId}のガントチャート
       </h1>
-      <ViewModeButtons />
+      <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
+      <DateTypeSelector dateType={dateType} setDateType={setDateType} />
       <div className="w-full h-[calc(100vh-100px)] bg-white border border-gray-300 rounded-lg overflow-hidden shadow-lg">
         <Gantt
           tasks={tasks}
           viewMode={viewMode}
           columnWidth={60}
-          // rowHeight={}
           locale="ja-JP"
           TaskListHeader={TaskListHeader}
           TaskListTable={TaskListTable}
