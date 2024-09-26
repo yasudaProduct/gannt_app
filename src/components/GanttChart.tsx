@@ -1,43 +1,91 @@
 "use client";
 
 import { Gantt, Task, ViewMode } from "gantt-task-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "gantt-task-react/dist/index.css";
+import { Wbs } from "@/types/Wbs";
 
-// import '../styles/'
+interface CustomTask extends Task { 
+  wbsId: string;
+}
+
+const fetchTasks = async (): Promise<Wbs[]> => {
+
+  const response = await fetch('/api/wbs')
+  if (!response.ok) {
+    throw new Error('Failed to fetch tasks')
+  }
+  return response.json()
+}
+
+const transformTasks = (wbsTasks: Wbs[]): CustomTask[] => {
+  return wbsTasks.map(apiTask => ({
+    id: apiTask.id.toString(),
+    name: apiTask.task,
+    start: new Date(apiTask.yoteiStartDate),
+    end: new Date(apiTask.yoteiEndDate),
+    progress: apiTask.progress_Rate,
+    type: 'task',
+    isDisabled: false,
+    styles: { progressColor: '#0080ff', progressSelectedColor: '#0080ff' },
+    wbsId: apiTask.wbsId,
+  }))
+}
 
 export default function GanttChart() {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        setIsLoading(true);
+        const apiTasks = await fetchTasks();
+        const transformedTasks = transformTasks(apiTasks);
+        setTasks(transformedTasks);
+        setError(null);
+      } catch (error) {
+        console.log(error);
+        setError("タスクの読み込み中にエラーが発生しました。");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, []);
   
-  const tasks: Task[] = [
-    {
-      start: new Date(2023, 0, 1),
-      end: new Date(2023, 0, 15),
-      name: "企画立案",
-      id: "Task 1",
-      type: "task",
-      progress: 45,
-      isDisabled: false,
-    },
-    {
-      start: new Date(2023, 0, 10),
-      end: new Date(2023, 1, 5),
-      name: "デザイン作成",
-      id: "Task 2",
-      type: "task",
-      progress: 30,
-      isDisabled: false,
-    },
-    {
-      start: new Date(2023, 1, 1),
-      end: new Date(2023, 1, 20),
-      name: "開発",
-      id: "Task 3",
-      type: "task",
-      progress: 0,
-      isDisabled: false,
-    },
-  ];
+  // const tasks: Task[] = [
+  //   {
+  //     start: new Date(2023, 0, 1),
+  //     end: new Date(2023, 0, 15),
+  //     name: "企画立案",
+  //     id: "Task 1",
+  //     type: "task",
+  //     progress: 45,
+  //     isDisabled: false,
+  //   },
+  //   {
+  //     start: new Date(2023, 0, 10),
+  //     end: new Date(2023, 1, 5),
+  //     name: "デザイン作成",
+  //     id: "Task 2",
+  //     type: "task",
+  //     progress: 30,
+  //     isDisabled: false,
+  //   },
+  //   {
+  //     start: new Date(2023, 1, 1),
+  //     end: new Date(2023, 1, 20),
+  //     name: "開発",
+  //     id: "Task 3",
+  //     type: "task",
+  //     progress: 0,
+  //     isDisabled: false,
+  //   },
+  // ];
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("ja-JP", {
@@ -59,6 +107,7 @@ export default function GanttChart() {
         style={{ height: headerHeight }}
       >
         <div style={{ width: "200px" }}>タスク名</div>
+        <div style={{ width: "60px" }}>WBSNO</div>
         <div style={{ width: "60px" }}>開始日</div>
         <div style={{ width: "60px" }}>終了日</div>
         <div className="text-right" style={{ width: "30px" }}>
@@ -74,7 +123,7 @@ export default function GanttChart() {
     fontFamily: string;
     fontSize: string;
     locale: string;
-    tasks: Task[];
+    tasks: CustomTask[];
     selectedTaskId: string;
     setSelectedTask: (taskId: string) => void;
     onExpanderClick: (task: Task) => void;
@@ -92,6 +141,9 @@ export default function GanttChart() {
               style={{ width: "200px"}}
             >
               {task.name}
+            </div>
+            <div>
+              {task.wbsId}
             </div>
             <div style={{ width: "60px" }}>
               {task.start.toLocaleDateString("ja-JP", )}
@@ -140,6 +192,14 @@ export default function GanttChart() {
         ))}
       </div>
     )
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">読み込み中...</div>
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>
   }
 
   return (
