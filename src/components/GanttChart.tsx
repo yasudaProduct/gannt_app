@@ -22,26 +22,98 @@ const fetchTasks = async (): Promise<Wbs[]> => {
 }
 
 const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
+  const projects = wbsTasks.reduce(
+    (acc: { [phase: string]: CustomTask }, wbsTask: Wbs) => {
+      let start: Date, end: Date;
+      let kosu: number;
 
-  const tasks = wbsTasks.map(wbsTask => {
-    let start: Date, end: Date
-    let kosu: number
+      switch (dateType) {
+        case "kijun":
+          start = new Date(wbsTask.kijunStartDate);
+          end = new Date(wbsTask.kijunEndDate);
+          kosu = wbsTask.kijunKosu;
+          break;
+        case "yotei":
+          start = new Date(wbsTask.yoteiStartDate);
+          end = new Date(wbsTask.yoteiEndDate);
+          kosu = wbsTask.yoteiKosu;
+          break;
+        case "jisseki":
+          start = wbsTask.jissekiStartDate
+            ? new Date(wbsTask.jissekiStartDate)
+            : new Date(wbsTask.yoteiStartDate);
+          end = wbsTask.jissekiEndDate
+            ? new Date(wbsTask.jissekiEndDate)
+            : new Date(wbsTask.yoteiEndDate);
+          kosu = wbsTask.jissekiKosu;
+          break;
+      }
+
+      const phase = wbsTask.phase;
+
+      if (!acc[phase]) {
+        acc[phase] = {
+          id: wbsTask.phase,
+          name: wbsTask.phase,
+          wbsId: wbsTask.wbsId,
+          tanto: "",
+          progress: 0,
+          type: "project",
+          start: start,
+          end: end,
+          kosu: kosu,
+          hideChildren: false,
+          isDisabled: false,
+        };
+      } else {
+        acc[phase].kosu += kosu;
+        if (end) {
+          if (
+            !acc[phase].end ||
+            end > acc[phase].end
+          ) {
+            acc[phase].end = end;
+          }
+        }
+        if (start) {
+          if (
+            !acc[phase].start ||
+            start < acc[phase].start
+          ) {
+            acc[phase].start = start;
+          }
+        }
+      }
+
+      return acc;
+    },
+    {}
+  );
+
+  const tasks = wbsTasks.map((wbsTask) => {
+    let start: Date, end: Date;
+    let kosu: number;
+
     switch (dateType) {
-      case 'kijun':
-        start = new Date(wbsTask.kijunStartDate)
-        end = new Date(wbsTask.kijunEndDate)
-        kosu = wbsTask.kijunKosu
-        break
-      case 'yotei':
-        start = new Date(wbsTask.yoteiStartDate)
-        end = new Date(wbsTask.yoteiEndDate)
-        kosu = wbsTask.yoteiKosu
-        break
-      case 'jisseki':
-        start = wbsTask.jissekiStartDate ? new Date(wbsTask.jissekiStartDate) : new Date(wbsTask.yoteiStartDate)
-        end = wbsTask.jissekiEndDate ? new Date(wbsTask.jissekiEndDate) : new Date(wbsTask.yoteiEndDate)
-        kosu = wbsTask.jissekiKosu
-        break
+      case "kijun":
+        start = new Date(wbsTask.kijunStartDate);
+        end = new Date(wbsTask.kijunEndDate);
+        kosu = wbsTask.kijunKosu;
+        break;
+      case "yotei":
+        start = new Date(wbsTask.yoteiStartDate);
+        end = new Date(wbsTask.yoteiEndDate);
+        kosu = wbsTask.yoteiKosu;
+        break;
+      case "jisseki":
+        start = wbsTask.jissekiStartDate
+          ? new Date(wbsTask.jissekiStartDate)
+          : new Date(wbsTask.yoteiStartDate);
+        end = wbsTask.jissekiEndDate
+          ? new Date(wbsTask.jissekiEndDate)
+          : new Date(wbsTask.yoteiEndDate);
+        kosu = wbsTask.jissekiKosu;
+        break;
     }
     return {
       id: wbsTask.id.toString(),
@@ -49,60 +121,30 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
       start,
       end,
       progress: wbsTask.progress_Rate,
-      type: 'task',
+      type: "task",
       isDisabled: false,
-      styles: { progressColor: '#0080ff', progressSelectedColor: '#0080ff' },
+      styles: { progressColor: "#0080ff", progressSelectedColor: "#0080ff" },
       project: wbsTask.phase,
       // phase: wbsTask.phase,
       // activity: wbsTask.activity,
       wbsId: wbsTask.wbsId,
       tanto: wbsTask.tanto,
-      kosu: kosu
-    } as CustomTask
-  })
+      kosu: kosu,
+    } as CustomTask;
+  });
 
-  // projectを作成
-  // interface PhaseData {
-  //   phase: string;
-  //   kijunStartDate: string | null;
-  //   jissekiEndDate: string | null;
-  // }
-
-  const projects = wbsTasks.reduce((acc: { [phase: string]: CustomTask }, wbsTask: Wbs) => {
-
-    const phase = wbsTask.phase;
-
-    if (!acc[phase]) {
-      acc[phase] = {
-        id: wbsTask.phase,
-        name: wbsTask.phase,
-        wbsId: "",
-        tanto: "",
-        progress: 0,
-        type: "project",
-        start: new Date(wbsTask.kijunStartDate),
-        end: new Date(wbsTask.kijunEndDate),
-        kosu: wbsTask.kijunKosu,
-        hideChildren: false,
-        isDisabled: false,
-      };
-    } else {
-      if (wbsTask.kijunEndDate) {
-        if (
-          !acc[phase].end ||
-          new Date(wbsTask.kijunEndDate) > acc[phase].end
-        ) {
-          acc[phase].end = new Date(wbsTask.kijunEndDate);
-        }
+  // wbsIdの昇順でソート
+  return Object.values(projects)
+    .concat(Object.values(tasks))
+    .sort((a, b) => {
+      if (a.wbsId < b.wbsId) {
+        return -1;
       }
-    }
-
-    return acc;
-  }, {});
-
-  console.log(projects);
-
-  return tasks.concat(Object.values(projects));
+      if (a.wbsId > b.wbsId) {
+        return 1;
+      }
+      return 0;
+    });
 }
 
 export default function GanttChart({ projectId }: { projectId: string }) {
@@ -139,6 +181,10 @@ export default function GanttChart({ projectId }: { projectId: string }) {
       setTasks(transformedTasks);
     }
   }, [dateType, apiTasks]);
+
+  const handleExpanderClick = (task: CustomTask) => {
+    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("ja-JP", {
@@ -192,7 +238,9 @@ export default function GanttChart({ projectId }: { projectId: string }) {
     selectedTaskId: string;
     setSelectedTask: (taskId: string) => void;
     onExpanderClick: (task: CustomTask) => void;
-  }> = ({ tasks, rowHeight }) => {
+    expanderFlg: boolean;
+  }> = ({ tasks, rowHeight, onExpanderClick}) => {
+
     return (
       <div>
         {tasks.map((task) => (
@@ -201,9 +249,28 @@ export default function GanttChart({ projectId }: { projectId: string }) {
             className="flex items-center gap-4 px-4 py-2 border-b border-gray-200 text-sm"
             style={{ height: rowHeight }}
           >
-            <div className="truncate" style={{ width: columnWidths.task }}>
-            <input type="buttom">▼</input>
-              {task.name}
+            <div
+              className="truncate _nI1Xw"
+              style={{ width: columnWidths.task }}
+            >
+              {task.type === 'project'? (
+                <button
+                  className="_2QjE6"
+                  onClick={() => onExpanderClick(task)}
+                >
+                  {/* ▶︎ */}
+                  ⚪︎
+                </button>
+              ) : (
+                // <button
+                //   className="_2QjE6"
+                //   onClick={() => onExpanderClick(task)}
+                // >
+                //   ▼
+                // </button>
+                <div>　　</div>
+              )}
+              <div>{task.name}</div>
             </div>
             <div style={{ width: columnWidths.wbsId }}>{task.wbsId}</div>
             <div style={{ width: columnWidths.tanto }}>{task.tanto}</div>
@@ -213,7 +280,10 @@ export default function GanttChart({ projectId }: { projectId: string }) {
             <div style={{ width: columnWidths.end }}>
               {task.end.toLocaleDateString("ja-JP")}
             </div>
-            <div className="text-right" style={{ width: columnWidths.progress }}>
+            <div
+              className="text-right"
+              style={{ width: columnWidths.progress }}
+            >
               {task.progress}%
             </div>
             <div style={{ width: columnWidths.kosu }}>{task.kosu}</div>
@@ -221,11 +291,6 @@ export default function GanttChart({ projectId }: { projectId: string }) {
         ))}
       </div>
     );
-  };
-
-  const handleExpanderClick = (task: Task) => {
-    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
-    console.log("On expander click Id:" + task.id);
   };
 
   if (isLoading) {
@@ -255,10 +320,11 @@ export default function GanttChart({ projectId }: { projectId: string }) {
         <Gantt
           tasks={tasks}
           viewMode={viewMode}
+          viewDate={new Date()}
           columnWidth={60}
           ganttHeight={0}
           barFill={100}
-          preStepsCount={10}
+          preStepsCount={100}
           locale="ja-JP"
           TaskListHeader={TaskListHeader}
           TaskListTable={TaskListTable}
@@ -270,6 +336,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
               <p>終了: {formatDate(task.end)}</p>
             </div>
           )}
+          onExpanderClick={handleExpanderClick}
         />
       </div>
     </div>

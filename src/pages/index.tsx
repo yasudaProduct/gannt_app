@@ -18,7 +18,7 @@ export default function Home() {
       <ul>
         {projects.map((project) => (
           <li key={project.projectId}>
-            <Link href={`/gannt-chart/${project.projectId}`}>{project.projectName}</Link>
+            <Link href={{ pathname: "/gannt-chart", query: {projectId: project.projectId}}}>{project.projectName}</Link>
           </li>
         ))}
       </ul>
