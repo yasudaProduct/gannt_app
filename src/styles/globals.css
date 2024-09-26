@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import 'gantt-task-react/dist/index.css';
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+.gantt-chart-container {
+  @apply w-full overflow-x-auto;
+}
+
+.gantt-chart-container .gantt-container {
+  @apply font-sans;
+}
+
+.gantt-chart-container .bar-wrapper {
+  @apply rounded-full;
+}
+
+.gantt-chart-container .bar-wrapper:hover {
+  @apply opacity-80;
+}
+
+.gantt-chart-container .bar-label {
+  @apply text-xs font-medium;
+}
