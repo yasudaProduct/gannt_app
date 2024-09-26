@@ -1,167 +1,172 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Gantt, Task, ViewMode, StylingOption, DisplayOption } from 'gantt-task-react'
-import { TaskListColumn } from 'gantt-task-react/dist/components/task-list/task-list-table'
-import "gantt-task-react/dist/index.css"
-import { format } from 'date-fns'
+import { Gantt, Task, ViewMode } from "gantt-task-react";
+import React, { useState } from "react";
+import "gantt-task-react/dist/index.css";
 
-interface ProjectTask {
-  id: number
-  projectId: string
-  projectName: string
-  wbsId: string
-  phase: string
-  activity: string
-  task: string
-  kinoSbt: string
-  subsystem: string
-  tanto: string
-  tantoRev: string
-  kijunStartDate: string
-  kijunEndDate: string
-  kijunKosu: number
-  kijunKosuBuffer: number
-  yoteiStartDate: string
-  yoteiEndDate: string
-  yoteiKosu: number
-  jissekiStartDate: string | null
-  jissekiEndDate: string | null
-  jissekiKosu: number
-  status: string
-  progress_Rate: number
-}
-
-const convertToGanttTask = (projectTask: ProjectTask): Task => {
-  return {
-    id: projectTask.id.toString(),
-    name: projectTask.task,
-    start: new Date(projectTask.yoteiStartDate),
-    end: new Date(projectTask.yoteiEndDate),
-    progress: projectTask.progress_Rate,
-    type: 'task',
-    project: projectTask.projectName,
-    styles: { progressColor: '#ffbb54', progressSelectedColor: '#ff9e0d' },
-  }
-}
+// import '../styles/'
 
 export default function GanttChart() {
-  const [tasks, setTasks] = useState<Task[]>([])
-
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch('/api/tasks')
-        const data: ProjectTask[] = await response.json()
-        const ganttTasks = data.map(convertToGanttTask)
-        setTasks(ganttTasks)
-      } catch (error) {
-        console.error('Error fetching tasks:', error)
-      }
-    }
-
-    fetchTasks()
-  }, [])
-
-  const handleExpanderClick = (task: Task) => {
-    console.log('Expander clicked for task:', task)
-  }
-
-  const handleTaskClick = (task: Task) => {
-    console.log('Task clicked:', task)
-  }
-
-  const handleProgressChange = (task: Task) => {
-    console.log('Task progress changed:', task)
-  }
-
-  const handleTaskChange = (task: Task) => {
-    console.log('Task changed:', task)
-  }
-
-  const handleDblClick = (task: Task) => {
-    console.log('Task double clicked:', task)
-  }
-
-  const handleSelect = (task: Task, isSelected: boolean) => {
-    console.log('Task selected:', task, isSelected)
-  }
-
-  const calculateDuration = (start: Date, end: Date) => {
-    const diffTime = Math.abs(end.getTime() - start.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays * 8 // Assuming 8 working hours per day
-  }
-
-  const ganttStyles: StylingOption = {
-    headerHeight: 50,
-    rowHeight: 50,
-    barCornerRadius: 5,
-    barFill: 45,
-    barProgressColor: '#ff9e0d',
-    barProgressSelectedColor: '#ff9e0d',
-    barBackgroundColor: '#e0e0e0',
-    barBackgroundSelectedColor: '#e0e0e0',
-    arrowColor: '#ccc',
-    arrowIndent: 20,
-    todayColor: 'rgba(252, 248, 227, 0.5)',
-    TooltipContent: ({ task }: { task: Task }) => (
-      <div className="custom-tooltip">
-        <h4>{task.name}</h4>
-        <p>予定: {format(task.start, 'yyyy/MM/dd')} - {format(task.end, 'yyyy/MM/dd')}</p>
-        <p>工数: {calculateDuration(task.start, task.end)}h</p>
-      </div>
-    ),
-  }
-
-  const displayOptions: DisplayOption = {
-    viewMode: ViewMode.Week,
-    viewDate: new Date(),
-    preStepsCount: 1,
-  }
-
-  const columns: TaskListColumn[] = [
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day)
+  
+  const tasks: Task[] = [
     {
-      id: 'name',
-      label: 'タスク名',
-      width: 200,
-      renderer: (props) => <div>{props.task.name}</div>,
+      start: new Date(2023, 0, 1),
+      end: new Date(2023, 0, 15),
+      name: "企画立案",
+      id: "Task 1",
+      type: "task",
+      progress: 45,
+      isDisabled: false,
     },
     {
-      id: 'period',
-      label: '予定期間',
-      width: 200,
-      renderer: (props) => (
-        <div>
-          {format(props.task.start, 'yyyy/MM/dd')} - {format(props.task.end, 'yyyy/MM/dd')}
+      start: new Date(2023, 0, 10),
+      end: new Date(2023, 1, 5),
+      name: "デザイン作成",
+      id: "Task 2",
+      type: "task",
+      progress: 30,
+      isDisabled: false,
+    },
+    {
+      start: new Date(2023, 1, 1),
+      end: new Date(2023, 1, 20),
+      name: "開発",
+      id: "Task 3",
+      type: "task",
+      progress: 0,
+      isDisabled: false,
+    },
+  ];
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const TaskListHeader: React.FC<{
+    headerHeight: number;
+    rowWidth: string;
+    fontFamily: string;
+    fontSize: string;
+  }> = ({headerHeight}) => {
+    return (
+      <div
+        className="flex justify-center items-center gap-4 px-4 bg-gray-100 font-semibold text-sm text-gray-700"
+        style={{ height: headerHeight }}
+      >
+        <div style={{ width: "200px" }}>タスク名</div>
+        <div style={{ width: "60px" }}>開始日</div>
+        <div style={{ width: "60px" }}>終了日</div>
+        <div className="text-right" style={{ width: "30px" }}>
+          進捗
         </div>
-      ),
-    },
-    {
-      id: 'duration',
-      label: '予定工数',
-      width: 100,
-      renderer: (props) => <div>{calculateDuration(props.task.start, props.task.end)}h</div>,
-    },
-  ]
+      </div>
+    );
+  };
+
+  const TaskListTable: React.FC<{
+    rowHeight: number;
+    rowWidth: string;
+    fontFamily: string;
+    fontSize: string;
+    locale: string;
+    tasks: Task[];
+    selectedTaskId: string;
+    setSelectedTask: (taskId: string) => void;
+    onExpanderClick: (task: Task) => void;
+  }> = ({ tasks, rowHeight }) => {
+    return (
+      <div>
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            className="flex items-center gap-4 px-4 py-2 border-b border-gray-200 text-sm"
+            style={{height: rowHeight }}
+          >
+            <div
+              className="truncate"
+              style={{ width: "200px"}}
+            >
+              {task.name}
+            </div>
+            <div style={{ width: "60px" }}>
+              {task.start.toLocaleDateString("ja-JP", )}
+            </div>
+            <div style={{ width: "60px" }}>
+              {task.end.toLocaleDateString("ja-JP", )}
+            </div>
+            <div
+              className="text-right"
+              style={{ width: "30px"}}
+            >
+              {task.progress}%
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const ViewModeButtons: React.FC = () => {
+    const buttons = [
+      { mode: ViewMode.Hour, label: '時間' },
+      { mode: ViewMode.QuarterDay, label: '6時間' },
+      { mode: ViewMode.HalfDay, label: '12時間' },
+      { mode: ViewMode.Day, label: '日' },
+      { mode: ViewMode.Week, label: '週' },
+      { mode: ViewMode.Month, label: '月' },
+      { mode: ViewMode.Year, label: '年' },
+    ]
+
+    return (
+      <div className="flex space-x-2 mb-4">
+        {buttons.map(({ mode, label }) => (
+          <button
+            key={mode}
+            onClick={() => setViewMode(mode)}
+            className={`px-3 py-1 text-sm font-medium rounded-md ${
+              viewMode === mode
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            aria-pressed={viewMode === mode}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
-    <div className="gantt-container">
-      <Gantt
-        tasks={tasks}
-        onExpanderClick={handleExpanderClick}
-        onClick={handleTaskClick}
-        onDateChange={handleTaskChange}
-        onProgressChange={handleProgressChange}
-        onDoubleClick={handleDblClick}
-        onSelect={handleSelect}
-        listCellWidth=""
-        ganttHeight={400}
-        columnWidth={60}
-        columns={columns}
-        styles={ganttStyles}
-        {...displayOptions}
-      />
+    <div className="w-full h-screen p-4 bg-gray-100 font-sans">
+      <h1 className="text-2xl font-bold mb-4 text-gray-800">
+        ガントチャート例
+      </h1>
+      <ViewModeButtons />
+      <div className="w-full h-[calc(100vh-100px)] bg-white border border-gray-300 rounded-lg overflow-hidden shadow-lg">
+        <Gantt
+          tasks={tasks}
+          viewMode={viewMode}
+          columnWidth={60}
+          // rowHeight={}
+          locale="ja-JP"
+          TaskListHeader={TaskListHeader}
+          TaskListTable={TaskListTable}
+          TooltipContent={({ task }) => (
+            <div className="p-2 bg-white rounded shadow-md">
+              <h3 className="font-bold">{task.name}</h3>
+              <p>進捗: {task.progress}%</p>
+              <p>開始: {formatDate(task.start)}</p>
+              <p>終了: {formatDate(task.end)}</p>
+            </div>
+          )}
+        />
+      </div>
     </div>
-  )
+  );
 }
