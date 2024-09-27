@@ -20,6 +20,6 @@ export type Wbs = {
   jissekiStartDate: string | null;
   jissekiEndDate: string | null;
   jissekiKosu: number;
-  status: string;
+  status: string | null;
   progress_Rate: number;
 };

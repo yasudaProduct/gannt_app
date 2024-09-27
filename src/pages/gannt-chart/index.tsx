@@ -10,7 +10,9 @@ export default function GanntChartPage() {
 
     return (
         <> 
-        <GanttChart projectId={projectId}/>
+        <GanttChart projectId={projectId} dateType={'kijun'}/>
+        <GanttChart projectId={projectId} dateType={'yotei'}/>
+        <GanttChart projectId={projectId} dateType={'jisseki'}/>
         </>
     )
 }
