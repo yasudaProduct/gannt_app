@@ -8,6 +8,7 @@ import { ViewModeButtons } from "./viewModeButton";
 import { Status } from "@/types/ScheduleMode";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Switch } from "./ui/switch";
 
 interface CustomTask extends Task { 
   wbsId: string;
@@ -31,7 +32,7 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
     (acc: { [phase: string]: CustomTask }, wbsTask: Wbs) => {
       let start: Date, end: Date;
       let kosu: number;
-      const status: Status = wbsTask.status == '' ? '未着手' : wbsTask.status;
+      const status: Status = wbsTask.status == '' ? '未着手' : wbsTask.status as Status;
 
       switch (dateType) {
         case "kijun":
@@ -115,7 +116,7 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
   const tasks = wbsTasks.map((wbsTask) => {
     let start: Date, end: Date;
     let kosu: number;
-    const status: string = wbsTask.status ?? "未着手";
+    const status: Status = wbsTask.status == '' ? '未着手' : wbsTask.status as Status;
 
     switch (dateType) {
       case "kijun":
@@ -186,8 +187,14 @@ export default function GanttChart({ projectId}: { projectId: string}) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);  
   const [selectedTanto, setSelectedTanto] = useState<string>("all");
-  const [projects, setProjects] = useState<string[]>([]);
   const [tantos, setTantos] = useState<string[]>([]);
+  const [columnVisibility, setColumnVisibility] = useState({
+    tanto: true,
+    start: true,
+    end: true,
+    kosu: true,
+    status: true,
+  });
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -232,6 +239,10 @@ export default function GanttChart({ projectId}: { projectId: string}) {
     setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
   };
 
+  const handleColumnToggle = (column: keyof typeof columnVisibility) => {
+    setColumnVisibility(prev => ({ ...prev, [column]: !prev[column] }));
+  };
+
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("ja-JP", {
       year: "numeric",
@@ -244,11 +255,11 @@ export default function GanttChart({ projectId}: { projectId: string}) {
     task: "150px",
     wbsId: "55px",
     tanto: "28px",
-    start: "60px",
-    end: "60px",
+    start: "5rem",
+    end: "5rem",
     progress: "20px",
-    kosu: "38px",
-    status: "45px",
+    kosu: "3rem",
+    status: "3rem",
   };
 
   const TaskListHeader: React.FC<{
@@ -259,19 +270,16 @@ export default function GanttChart({ projectId}: { projectId: string}) {
   }> = ({ headerHeight }) => {
     return (
       <div
-        className="flex justify-center items-center gap-4 px-4 bg-gray-100 font-semibold text-sm text-gray-700"
+        className="flex items-center gap-4 px-4 bg-gray-100 font-semibold text-sm text-gray-700"
         style={{ height: headerHeight }}
       >
         <div style={{ width: columnWidths.task }}>タスク名</div>
         <div style={{ width: columnWidths.wbsId }}>WBSNO</div>
-        <div style={{ width: columnWidths.tanto }}>担当</div>
-        <div style={{ width: columnWidths.start }}>開始日</div>
-        <div style={{ width: columnWidths.end }}>終了日</div>
-        {/* <div className="text-right" style={{ width: columnWidths.progress }}>
-          進捗
-        </div> */}
-        <div className="" style={{ width: columnWidths.kosu }}><p>工数</p></div>
-        <div style={{ width: columnWidths.status }}>状況</div>
+        {columnVisibility.tanto && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.tanto }}>担当</div>}
+        {columnVisibility.start && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.start }}>開始日</div>}
+        {columnVisibility.end && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.end }}>終了日</div>}
+        {columnVisibility.kosu && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.kosu }}>工数</div>}
+        {columnVisibility.status && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.status }}>状況</div>}
       </div>
     );
   };
@@ -294,7 +302,7 @@ export default function GanttChart({ projectId}: { projectId: string}) {
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="flex items-center justify-center gap-4 px-4 border-b border-gray-200 text-sm"
+            className="flex items-center gap-4 px-4 border-b border-gray-200 text-sm"
             style={{ height: rowHeight }}
           >
             <div
@@ -306,16 +314,9 @@ export default function GanttChart({ projectId}: { projectId: string}) {
                   className="_2QjE6"
                   onClick={() => onExpanderClick(task)}
                 >
-                  {/* ▶︎ */}
                   ⚪︎
                 </button>
               ) : (
-                // <button
-                //   className="_2QjE6"
-                //   onClick={() => onExpanderClick(task)}
-                // >
-                //   ▼
-                // </button>
                 <div>　</div>
               )}
               <div>{task.name}</div>
@@ -323,25 +324,19 @@ export default function GanttChart({ projectId}: { projectId: string}) {
 
             {task.type !== "project" ? (
               <div style={{ width: columnWidths.wbsId }}>{task.wbsId}</div>
-            ): (
+            ) : (
               <div style={{ width: columnWidths.wbsId }}></div>
             )}
 
-            <div style={{ width: columnWidths.tanto }}>{task.tanto}</div>
-            <div className="border-l min-h-full py-20" style={{ width: columnWidths.start }}>
+            {columnVisibility.tanto && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.tanto }}>{task.tanto}</div>}
+            {columnVisibility.start && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.start }}>
               {task.start.toLocaleDateString("ja-JP")}
-            </div>
-            <div className="border-l min-h-full py-20" style={{ width: columnWidths.end }}>
+            </div>}
+            {columnVisibility.end && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.end }}>
               {task.end.toLocaleDateString("ja-JP")}
-            </div>
-            {/* <div
-              className="text-right"
-              style={{ width: columnWidths.progress }}
-            >
-              {task.progress}%
-            </div> */}
-            <div className="border-l min-h-full py-20" style={{ width: columnWidths.kosu }}>{task.kosu}</div>
-            <div className="border-l min-h-full py-20" style={{ width: columnWidths.status }}>{task.status}</div>
+            </div>}
+            {columnVisibility.kosu && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.kosu }}>{task.kosu}</div>}
+            {columnVisibility.status && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.status }}>{task.status}</div>}
           </div>
         ))}
       </div>
@@ -388,6 +383,48 @@ export default function GanttChart({ projectId}: { projectId: string}) {
       <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
       <DateTypeSelector dateType={dateType} setDateType={setDateType} />
       <button className="px-3 py-1 text-sm font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 mb-4" onClick={() => setIsTalebeHide(!isTalebeHide)}>切り替え</button>
+      <div className="flex space-x-4 mb-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="column-tanto"
+            checked={columnVisibility.tanto}
+            onCheckedChange={() => handleColumnToggle('tanto')}
+          />
+          <Label htmlFor="column-tanto">担当</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="column-start"
+            checked={columnVisibility.start}
+            onCheckedChange={() => handleColumnToggle('start')}
+          />
+          <Label htmlFor="column-start">開始日</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="column-end"
+            checked={columnVisibility.end}
+            onCheckedChange={() => handleColumnToggle('end')}
+          />
+          <Label htmlFor="column-end">終了日</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="column-kosu"
+            checked={columnVisibility.kosu}
+            onCheckedChange={() => handleColumnToggle('kosu')}
+          />
+          <Label htmlFor="column-kosu">工数</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="column-status"
+            checked={columnVisibility.status}
+            onCheckedChange={() => handleColumnToggle('status')}
+          />
+          <Label htmlFor="column-status">状況</Label>
+        </div>
+      </div>
       <div className="w-full bg-white border border-gray-300 rounded-lg overflow-hidden shadow-lg">
         <Gantt
           tasks={tasks}
@@ -396,17 +433,20 @@ export default function GanttChart({ projectId}: { projectId: string}) {
           // columnWidth={}
           listCellWidth={(isTalebeHide ? "100" : "")}
           // ganttHeight={0}
-          barFill={100}
+          barFill={95}
           preStepsCount={100}
           locale="ja-JP"
           TaskListHeader={TaskListHeader}
           TaskListTable={TaskListTable}
-          TooltipContent={({ task }) => (
+          TooltipContent={({ task }:{task: CustomTask}) => (
             <div className="p-2 bg-white rounded shadow-md">
               <h3 className="font-bold">{task.name}</h3>
-              <p>進捗: {task.progress}%</p>
               <p>開始: {formatDate(task.start)}</p>
               <p>終了: {formatDate(task.end)}</p>
+              <p>担当: {task.tanto}</p>
+              <p>状況: {task.status}</p>
+              <p>工数: {task.kosu}</p>
+              <p>進捗: {task.progress}%</p>
             </div>
           )}
           onExpanderClick={handleExpanderClick}

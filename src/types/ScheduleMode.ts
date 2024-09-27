@@ -4,4 +4,4 @@ export declare enum ScheduleMode {
   Jisseki = "Jisseki",
 }
 
-export type Status = '' | '未着手' | '着手中' | '完了'
+export type Status = '未着手' | '着手中' | '完了'
