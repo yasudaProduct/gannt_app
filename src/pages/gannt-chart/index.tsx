@@ -1,10 +1,14 @@
 import GanttChart from "@/components/GanttChart";
-import { useSearchParams } from "next/navigation";
+import { GetServerSideProps } from "next";
 
-export default function GanntChartPage() {
-    const searchParams = useSearchParams();
-    const projectId: string = searchParams.get("projectId")!;
-    console.log(projectId);
+interface GanttChartPageProps {
+    projectId: string | null;
+}
+
+export default function GanttChartPage({ projectId }: GanttChartPageProps) {
+    if (!projectId) {
+        return <div>プロジェクトIDが指定されていません。</div>;
+    }
 
     return (
         <> 
@@ -12,3 +16,13 @@ export default function GanntChartPage() {
         </>
     )
 }
+
+export const getServerSideProps: GetServerSideProps<GanttChartPageProps> = async ({ query }) => {
+    const projectId = query.projectId as string | null;
+  
+    return {
+      props: {
+        projectId,
+      },
+    };
+  };
