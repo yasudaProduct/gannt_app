@@ -6,6 +6,8 @@ import { Wbs } from "@/types/Wbs";
 import { DateType, DateTypeSelector } from "./DateTypeButton";
 import { ViewModeButtons } from "./viewModeButton";
 import { Status } from "@/types/ScheduleMode";
+import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface CustomTask extends Task { 
   wbsId: string;
@@ -182,16 +184,28 @@ export default function GanttChart({ projectId}: { projectId: string}) {
   const [apiTasks, setApiTasks] = useState<Wbs[]>([]);
   const [isTalebeHide, setIsTalebeHide] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);  
+  const [selectedTanto, setSelectedTanto] = useState<string>("all");
+  const [projects, setProjects] = useState<string[]>([]);
+  const [tantos, setTantos] = useState<string[]>([]);
 
   useEffect(() => {
     const loadTasks = async () => {
       try {
         setIsLoading(true);
+
+        // タスクを取得
         const apiTasks = await fetchTasks(projectId);
         setApiTasks(apiTasks);
+
+        // タスクを取得gantt-task-reactの形式に変換
         const transformedTasks = transformTasks(apiTasks, dateType);
         setTasks(transformedTasks);
+
+        // プロジェクトと担当者のリストを作成
+        const tantoSet = new Set(apiTasks.map(task => task.tanto));
+        setTantos(Array.from(tantoSet));
+
         setError(null);
       } catch (error) {
         console.log(error);
@@ -207,9 +221,12 @@ export default function GanttChart({ projectId}: { projectId: string}) {
   useEffect(() => {
     if (apiTasks.length > 0) {
       const transformedTasks = transformTasks(apiTasks, dateType);
-      setTasks(transformedTasks);
+      const filteredTasks = transformedTasks.filter(task =>
+        (selectedTanto === "all" || task.tanto === selectedTanto)
+      );
+      setTasks(filteredTasks);
     }
-  }, [dateType, apiTasks]);
+  }, [dateType, apiTasks, selectedTanto]);
 
   const handleExpanderClick = (task: CustomTask) => {
     setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
@@ -350,8 +367,24 @@ export default function GanttChart({ projectId}: { projectId: string}) {
   return (
     <div className="w-full h-screen p-4 bg-gray-100 font-sans">
       <h1 className="text-2xl font-bold mb-4 text-gray-800">
-        {projectId}のガントチャート
+        {projectId}
       </h1>
+      <div className="flex space-x-4 mb-4">
+        <div className="space-y-2">
+          <Label htmlFor="tanto-select">担当者</Label>
+          <Select value={selectedTanto} onValueChange={setSelectedTanto}>
+            <SelectTrigger id="tanto-select">
+              <SelectValue placeholder="担当者を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全て</SelectItem>
+              {tantos.map(tanto => (
+                <SelectItem key={tanto} value={tanto}>{tanto}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
       <DateTypeSelector dateType={dateType} setDateType={setDateType} />
       <button className="px-3 py-1 text-sm font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 mb-4" onClick={() => setIsTalebeHide(!isTalebeHide)}>切り替え</button>
