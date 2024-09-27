@@ -1,5 +1,8 @@
+import { Status } from "./ScheduleMode";
+
 export type Wbs = {
   id: number;
+  rowNo: number;
   projectId: string;
   projectName: string;
   wbsId: string;
@@ -20,6 +23,6 @@ export type Wbs = {
   jissekiStartDate: string | null;
   jissekiEndDate: string | null;
   jissekiKosu: number;
-  status: string | null;
+  status: Status;
   progress_Rate: number;
 };

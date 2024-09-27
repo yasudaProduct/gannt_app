@@ -5,17 +5,19 @@ import React, { useEffect, useState } from "react";
 import { Wbs } from "@/types/Wbs";
 import { DateType, DateTypeSelector } from "./DateTypeButton";
 import { ViewModeButtons } from "./viewModeButton";
+import { Status } from "@/types/ScheduleMode";
 
 interface CustomTask extends Task { 
   wbsId: string;
+  rowNo: number;
   tanto: string;
   kosu: number;
-  status: string;
+  status: Status;
 }
 
-const fetchTasks = async (): Promise<Wbs[]> => {
+const fetchTasks = async (projectId: string): Promise<Wbs[]> => {
 
-  const response = await fetch('/api/wbs')
+  const response = await fetch(process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL + `/api/wbs?projectId=${projectId}` : '/api/wbs')
   if (!response.ok) {
     throw new Error('Failed to fetch tasks')
   }
@@ -27,7 +29,7 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
     (acc: { [phase: string]: CustomTask }, wbsTask: Wbs) => {
       let start: Date, end: Date;
       let kosu: number;
-      const status: string = wbsTask.status ?? "未着手";
+      const status: Status = wbsTask.status == '' ? '未着手' : wbsTask.status;
 
       switch (dateType) {
         case "kijun":
@@ -65,6 +67,7 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
           isDisabled: false,
           start: start,
           end: end,
+          rowNo: wbsTask.rowNo,
           kosu: kosu,
           status: status
         };
@@ -74,14 +77,14 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
         // すべて未着手であれば未着手とする
         // すべて完了であれば完了とする
         // それ以外は進行中とする
-        if (acc[phase].status === "未着手" && status !== "未着手") {
-          acc[phase].status = "進行中";
+        if (acc[phase].status === '未着手' && status !== '未着手') {
+          acc[phase].status = '着手中';
         }
-        if (acc[phase].status === "進行中" && status === "完了") {
-          acc[phase].status = "進行中";
+        if (acc[phase].status === '着手中' && status === '完了') {
+          acc[phase].status = '着手中';
         }
-        if (acc[phase].status === "完了" && status !== "完了") {
-          acc[phase].status = "進行中";
+        if (acc[phase].status === '完了' && status !== '完了') {
+          acc[phase].status = '着手中';
         }
         
         if (end) {
@@ -150,6 +153,7 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
       project: wbsTask.phase,
       // phase: wbsTask.phase,
       // activity: wbsTask.activity,
+      rowNo: wbsTask.rowNo,
       wbsId: wbsTask.wbsId,
       tanto: wbsTask.tanto,
       kosu: kosu,
@@ -157,23 +161,23 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
     } as CustomTask;
   });
 
-  // wbsIdの昇順でソート
+  // rowNoの昇順でソート
   return Object.values(projects)
     .concat(Object.values(tasks))
     .sort((a, b) => {
-      if (a.wbsId < b.wbsId) {
+      if (a.rowNo < b.rowNo) {
         return -1;
       }
-      if (a.wbsId > b.wbsId) {
+      if (a.rowNo > b.rowNo) {
         return 1;
       }
       return 0;
     });
 }
 
-export default function GanttChart({ projectId, dateType}: { projectId: string , dateType: DateType}) {
+export default function GanttChart({ projectId}: { projectId: string}) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
-  // const [dateType, setDateType] = useState<DateType>("yotei");
+  const [dateType, setDateType] = useState<DateType>("yotei");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [apiTasks, setApiTasks] = useState<Wbs[]>([]);
   const [isTalebeHide, setIsTalebeHide] = useState(true);
@@ -184,7 +188,7 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
     const loadTasks = async () => {
       try {
         setIsLoading(true);
-        const apiTasks = await fetchTasks();
+        const apiTasks = await fetchTasks(projectId);
         setApiTasks(apiTasks);
         const transformedTasks = transformTasks(apiTasks, dateType);
         setTasks(transformedTasks);
@@ -221,12 +225,12 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
 
   const columnWidths = { 
     task: "150px",
-    wbsId: "60px",
-    tanto: "60px",
+    wbsId: "55px",
+    tanto: "28px",
     start: "60px",
     end: "60px",
-    progress: "30px",
-    kosu: "10px",
+    progress: "20px",
+    kosu: "38px",
     status: "45px",
   };
 
@@ -243,13 +247,13 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
       >
         <div style={{ width: columnWidths.task }}>タスク名</div>
         <div style={{ width: columnWidths.wbsId }}>WBSNO</div>
-        <div style={{ width: columnWidths.tanto }}>担当者</div>
+        <div style={{ width: columnWidths.tanto }}>担当</div>
         <div style={{ width: columnWidths.start }}>開始日</div>
         <div style={{ width: columnWidths.end }}>終了日</div>
         {/* <div className="text-right" style={{ width: columnWidths.progress }}>
           進捗
         </div> */}
-        <div style={{ width: columnWidths.kosu }}>工数</div>
+        <div className="" style={{ width: columnWidths.kosu }}><p>工数</p></div>
         <div style={{ width: columnWidths.status }}>状況</div>
       </div>
     );
@@ -273,7 +277,7 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="flex items-center gap-4 px-4 py-2 border-b border-gray-200 text-sm"
+            className="flex items-center justify-center gap-4 px-4 border-b border-gray-200 text-sm"
             style={{ height: rowHeight }}
           >
             <div
@@ -295,7 +299,7 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
                 // >
                 //   ▼
                 // </button>
-                <div>　　</div>
+                <div>　</div>
               )}
               <div>{task.name}</div>
             </div>
@@ -307,10 +311,10 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
             )}
 
             <div style={{ width: columnWidths.tanto }}>{task.tanto}</div>
-            <div style={{ width: columnWidths.start }}>
+            <div className="border-l min-h-full py-20" style={{ width: columnWidths.start }}>
               {task.start.toLocaleDateString("ja-JP")}
             </div>
-            <div style={{ width: columnWidths.end }}>
+            <div className="border-l min-h-full py-20" style={{ width: columnWidths.end }}>
               {task.end.toLocaleDateString("ja-JP")}
             </div>
             {/* <div
@@ -319,8 +323,8 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
             >
               {task.progress}%
             </div> */}
-            <div style={{ width: columnWidths.kosu }}>{task.kosu}</div>
-            <div style={{ width: columnWidths.status }}>{task.status}</div>
+            <div className="border-l min-h-full py-20" style={{ width: columnWidths.kosu }}>{task.kosu}</div>
+            <div className="border-l min-h-full py-20" style={{ width: columnWidths.status }}>{task.status}</div>
           </div>
         ))}
       </div>
@@ -349,16 +353,16 @@ export default function GanttChart({ projectId, dateType}: { projectId: string ,
         {projectId}のガントチャート
       </h1>
       <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
-      {/* <DateTypeSelector dateType={dateType} setDateType={setDateType} /> */}
+      <DateTypeSelector dateType={dateType} setDateType={setDateType} />
       <button className="px-3 py-1 text-sm font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 mb-4" onClick={() => setIsTalebeHide(!isTalebeHide)}>切り替え</button>
-      <div className="w-full h-[calc(100vh-100px)] bg-white border border-gray-300 rounded-lg overflow-hidden shadow-lg">
+      <div className="w-full bg-white border border-gray-300 rounded-lg overflow-hidden shadow-lg">
         <Gantt
           tasks={tasks}
           viewMode={viewMode}
           viewDate={new Date()}
           // columnWidth={}
           listCellWidth={(isTalebeHide ? "100" : "")}
-          ganttHeight={0}
+          // ganttHeight={0}
           barFill={100}
           preStepsCount={100}
           locale="ja-JP"

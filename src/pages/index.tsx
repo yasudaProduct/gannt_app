@@ -1,12 +1,21 @@
 ;import { Project } from "@/types/Project";
 import Link from "next/link";
+import router from "next/router";
 import React, { useEffect, useState } from "react";
 
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    fetch("/api/projects")
+    console.log(process.env.NEXT_PUBLIC_API_URL)
+    // リクエストヘッダーにAccess-Control-Allow-Originを追加する
+
+    const url = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL + `/api/projects` : '/api/projects'
+    fetch(url,{
+      method: 'GET',
+      headers: {
+      }
+    })
       .then((response) => response.json())
       .then((data) => setProjects(data));
   }, []);
