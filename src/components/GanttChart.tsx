@@ -273,8 +273,8 @@ export default function GanttChart({ projectId }: { projectId: string }) {
 
   const columnWidths = {
     task: "150px",
-    wbsId: "55px",
-    tanto: "28px",
+    wbsId: "61px",
+    tanto: "42px",
     start: "5rem",
     end: "5rem",
     progress: "20px",
@@ -350,14 +350,15 @@ export default function GanttChart({ projectId }: { projectId: string }) {
     setSelectedTask: (taskId: string) => void;
     onExpanderClick: (task: CustomTask) => void;
     expanderFlg: boolean;
-  }> = ({ tasks, rowHeight, onExpanderClick }) => {
+  }> = ({ tasks, rowHeight, fontSize, onExpanderClick }) => {
+
     return (
       <div className="text-xs">
         {tasks.map((task) => (
           <div
             key={task.id}
             className="flex items-center gap-4 px-4 border-b border-gray-200 text-sm"
-            style={{ height: rowHeight }}
+            style={{ height: rowHeight, fontSize: fontSize, backgroundColor: task.type === "project" ? "#f0f0f0" : "" }}
           >
             <div
               className="truncate _nI1Xw"
@@ -411,7 +412,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
                 className="flex items-center justify-center h-full border-l"
                 style={{ width: columnWidths.kosu }}
               >
-                {task.kosu}
+                {task.kosu.toFixed(2)}
               </div>
             )}
             {columnVisibility.status && (

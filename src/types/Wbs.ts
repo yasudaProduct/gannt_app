@@ -1,5 +1,3 @@
-import { Status } from "./ScheduleMode";
-
 export type Wbs = {
   id: number;
   rowNo: number;

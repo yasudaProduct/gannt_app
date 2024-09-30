@@ -3,15 +3,26 @@
 import { Gantt, Task, ViewMode } from "gantt-task-react";
 import React, { useEffect, useState } from "react";
 import { Wbs } from "@/types/Wbs";
-import { DateType, DateTypeSelector } from "./DateTypeButton";
-import { ViewModeButtons } from "./ViewModeButton";
+import { DateType } from "./DateTypeButton";
 import { Status } from "@/types/ScheduleMode";
 import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { Switch } from "./ui/switch";
-import { DateTypeSelectorV2 } from "./DateTypeButtonV2";
+import { ViewModeButtons } from "./viewModeButton";
+import {
+  ColumnVisibility,
+  ColumnVisibilityToggle,
+} from "./ColumnVisibilityToggle";
+import { Button } from "./ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
-interface CustomTask extends Task { 
+interface CustomTask extends Task {
   wbsId: string;
   rowNo: number;
   tanto: string;
@@ -21,32 +32,66 @@ interface CustomTask extends Task {
 }
 
 const fetchTasks = async (projectId: string): Promise<Wbs[]> => {
-
-  const response = await fetch(process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL + `/api/wbs?projectId=${projectId}` : '/api/wbs')
+  const response = await fetch(
+    process.env.NEXT_PUBLIC_API_URL
+      ? process.env.NEXT_PUBLIC_API_URL + `/api/wbs?projectId=${projectId}`
+      : "/api/wbs"
+  );
   if (!response.ok) {
-    throw new Error('Failed to fetch tasks')
+    throw new Error("Failed to fetch tasks");
   }
-  return response.json()
-}
+  return response.json();
+};
 
 const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
-  let tasks: CustomTask[] = [];
-  wbsTasks.map((wbsTask) => {
-    const status: Status = wbsTask.status == '' ? '未着手' : wbsTask.status as Status;
-
-    // 予定、実績のタスクを作成する
-    if (dateType === "kijun") {
-      for (let i = 1; i <= 2; i++) {
+  switch (dateType) {
+    case "kijun":
+      const customTasks: CustomTask[] = [];
+      wbsTasks.map((wbsTask) => {
+        for (let i = 1; i <= 2; i++) {
+          customTasks.push({
+            id: wbsTask.id.toString(),
+            name: wbsTask.task,
+            start:
+              i == 1
+                ? new Date(wbsTask.yoteiStartDate)
+                : new Date(wbsTask.jissekiStartDate ?? wbsTask.yoteiStartDate),
+            end:
+              i == 1
+                ? new Date(wbsTask.yoteiEndDate)
+                : new Date(wbsTask.jissekiEndDate ?? wbsTask.yoteiEndDate),
+            progress: 0,
+            type: "task",
+            isDisabled: false,
+            styles: {
+              progressColor: "#0080ff",
+              progressSelectedColor: "#0080ff",
+            },
+            project: wbsTask.phase,
+            rowNo: wbsTask.rowNo,
+            wbsId: wbsTask.wbsId,
+            tanto: wbsTask.tanto,
+            kosu: i == 1 ? wbsTask.yoteiKosu : wbsTask.jissekiKosu,
+            status: wbsTask.status,
+            dateType: i == 1 ? 'yotei' : 'jisseki',
+          } as CustomTask);
+        }
+      });
+      return customTasks;
+    default:
+      const tasks = wbsTasks.map((wbsTask) => {
         let start: Date, end: Date;
         let kosu: number;
+        const status: Status =
+          wbsTask.status == "" ? "未着手" : (wbsTask.status as Status);
 
-        switch (i) {
-          case 1:
+        switch (dateType) {
+          case "yotei":
             start = new Date(wbsTask.yoteiStartDate);
             end = new Date(wbsTask.yoteiEndDate);
             kosu = wbsTask.yoteiKosu;
             break;
-          case 2:
+          case "jisseki":
             start = wbsTask.jissekiStartDate
               ? new Date(wbsTask.jissekiStartDate)
               : new Date(wbsTask.yoteiStartDate);
@@ -55,12 +100,10 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
               : new Date(wbsTask.yoteiEndDate);
             kosu = wbsTask.jissekiKosu;
             break;
-          default:
-            throw new Error("Invalid case value");
         }
 
-        let progress = wbsTask.jissekiKosu / kosu * 100;
-        tasks.push({
+        const progress = (wbsTask.jissekiKosu / kosu) * 100;
+        return {
           id: wbsTask.id.toString(),
           name: wbsTask.task,
           start,
@@ -69,9 +112,9 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
           type: "task",
           isDisabled: false,
           styles:
-            i == 1
-              ? { backgroundColor: "#ff2b00", backgroundSelectedColor: "#ff2b00" }
-              : { backgroundColor: "#0080ff", backgroundSelectedColor: "#0080ff" },
+            progress > 100
+              ? { progressColor: "#ff2b00", progressSelectedColor: "#ff2b00" }
+              : { progressColor: "#0080ff", progressSelectedColor: "#0080ff" },
           project: wbsTask.phase,
           // phase: wbsTask.phase,
           // activity: wbsTask.activity,
@@ -80,92 +123,34 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
           tanto: wbsTask.tanto,
           kosu: kosu,
           status: status,
-          dateType: i == 1 ? "yotei" : "jisseki",
-        } as CustomTask
-        );
-      }
-    } else if (dateType === 'yotei'){
-      let start = new Date(wbsTask.yoteiStartDate);
-      let end = new Date(wbsTask.yoteiEndDate);
-      let kosu = wbsTask.yoteiKosu;
-      let progress = wbsTask.jissekiKosu / kosu * 100;
+        } as CustomTask;
+      });
 
-      tasks.push({
-        id: wbsTask.id.toString(),
-        name: wbsTask.task,
-        start,
-        end,
-        progress: progress,
-        type: "task",
-        isDisabled: false,
-        styles: { progressColor: "#0080ff", progressSelectedColor: "#0080ff" },
-        project: wbsTask.phase,
-        // phase: wbsTask.phase,
-        // activity: wbsTask.activity,
-        rowNo: wbsTask.rowNo,
-        wbsId: wbsTask.wbsId,
-        tanto: wbsTask.tanto,
-        kosu: kosu,
-        status: status,
-        dateType: dateType
-      } as CustomTask
-      );
-    }else{
-      let start = wbsTask.jissekiStartDate
-        ? new Date(wbsTask.jissekiStartDate)
-        : new Date(wbsTask.yoteiStartDate);
-      let end = wbsTask.jissekiEndDate
-        ? new Date(wbsTask.jissekiEndDate)
-        : new Date(wbsTask.yoteiEndDate);
-      let kosu = wbsTask.jissekiKosu;
+      // rowNoの昇順でソート
+      return tasks.sort((a, b) => a.rowNo - b.rowNo);
+  }
+};
 
-      tasks.push({
-        id: wbsTask.id.toString(),
-        name: wbsTask.task,
-        start,
-        end,
-        progress: 0,
-        type: "task",
-        isDisabled: false,
-        styles: { progressColor: "#0080ff", progressSelectedColor: "#0080ff" },
-        project: wbsTask.phase,
-        // phase: wbsTask.phase,
-        // activity: wbsTask.activity,
-        rowNo: wbsTask.rowNo,
-        wbsId: wbsTask.wbsId,
-        tanto: wbsTask.tanto,
-        kosu: kosu,
-        status: status,
-        dateType: dateType
-      } as CustomTask
-      );
-    }
-  });
-
-
-  // rowNoの昇順でソート
-  return tasks.sort((a, b) => a.rowNo - b.rowNo);
-}
-
-export default function GanttChartV2({ projectId}: { projectId: string}) {
+export default function GanttChartV2({ projectId }: { projectId: string }) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
-  const [dateType, setDateType] = useState<DateType>("yotei");
+  const [dateType, setDateType] = useState<DateType>("kijun");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [apiTasks, setApiTasks] = useState<Wbs[]>([]);
   const [isTalebeHide, setIsTalebeHide] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);  
+  const [error, setError] = useState<string | null>(null);
   const [selectedTanto, setSelectedTanto] = useState<string>("all");
   const [tantos, setTantos] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [statuss, setStatus] = useState<string[]>([]);
-  const [columnVisibility, setColumnVisibility] = useState({
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     tanto: true,
     start: true,
     end: true,
     kosu: true,
     status: true,
   });
+  const [showControls, setShowControls] = useState(true);
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -181,11 +166,11 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
         setTasks(transformedTasks);
 
         // 担当者のリストを作成
-        const tantoSet = new Set(apiTasks.map(task => task.tanto));
+        const tantoSet = new Set(apiTasks.map((task) => task.tanto));
         setTantos(Array.from(tantoSet));
 
         // 状況のリストを作成
-        const statusSet = new Set(transformedTasks.map(task => task.status));
+        const statusSet = new Set(transformedTasks.map((task) => task.status));
         setStatus(Array.from(statusSet));
 
         setError(null);
@@ -198,14 +183,15 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
     };
 
     loadTasks();
-  }, []);
+  }, [dateType, projectId]);
 
   useEffect(() => {
     if (apiTasks.length > 0) {
       const transformedTasks = transformTasks(apiTasks, dateType);
-      const filteredTasks = transformedTasks.filter(task =>
-        (selectedTanto === "all" || task.tanto === selectedTanto) &&
-        (selectedStatus === "all" || task.status === selectedStatus)
+      const filteredTasks = transformedTasks.filter(
+        (task) =>
+          (selectedTanto === "all" || task.tanto === selectedTanto) &&
+          (selectedStatus === "all" || task.status === selectedStatus)
       );
       setTasks(filteredTasks);
     }
@@ -215,8 +201,8 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
     setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
   };
 
-  const handleColumnToggle = (column: keyof typeof columnVisibility) => {
-    setColumnVisibility(prev => ({ ...prev, [column]: !prev[column] }));
+  const handleColumnToggle = (column: keyof ColumnVisibility) => {
+    setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
   };
 
   const formatDate = (date: Date) => {
@@ -227,10 +213,10 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
     });
   };
 
-  const columnWidths = { 
+  const columnWidths = {
     task: "150px",
-    wbsId: "55px",
-    tanto: "28px",
+    wbsId: "61px",
+    tanto: "42px",
     start: "5rem",
     end: "5rem",
     progress: "20px",
@@ -251,11 +237,46 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
       >
         <div style={{ width: columnWidths.task }}>タスク名</div>
         <div style={{ width: columnWidths.wbsId }}>WBSNO</div>
-        {columnVisibility.tanto && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.tanto }}>担当</div>}
-        {columnVisibility.start && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.start }}>開始日</div>}
-        {columnVisibility.end && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.end }}>終了日</div>}
-        {columnVisibility.kosu && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.kosu }}>工数</div>}
-        {columnVisibility.status && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.status }}>状況</div>}
+        {columnVisibility.tanto && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.tanto }}
+          >
+            担当
+          </div>
+        )}
+        {columnVisibility.start && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.start }}
+          >
+            開始日
+          </div>
+        )}
+        {columnVisibility.end && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.end }}
+          >
+            終了日
+          </div>
+        )}
+        {columnVisibility.kosu && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.kosu }}
+          >
+            工数
+          </div>
+        )}
+        {columnVisibility.status && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.status }}
+          >
+            状況
+          </div>
+        )}
       </div>
     );
   };
@@ -271,15 +292,15 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
     setSelectedTask: (taskId: string) => void;
     onExpanderClick: (task: CustomTask) => void;
     expanderFlg: boolean;
-  }> = ({ tasks, rowHeight, onExpanderClick}) => {
+  }> = ({ tasks, rowHeight, fontSize, onExpanderClick }) => {
 
     return (
-      <div>
+      <div className="text-xs">
         {tasks.map((task) => (
           <div
             key={task.id}
             className="flex items-center gap-4 px-4 border-b border-gray-200 text-sm"
-            style={{ height: rowHeight }}
+            style={{ height: rowHeight, fontSize: fontSize, backgroundColor: task.dateType === "yotei" ? "#e6e6fa" : "#dda0dd" }}
           >
             <div
               className="truncate _nI1Xw"
@@ -304,15 +325,46 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
               <div style={{ width: columnWidths.wbsId }}></div>
             )}
 
-            {columnVisibility.tanto && <div className="flex items-center justify-center h-full" style={{ width: columnWidths.tanto }}>{task.tanto}</div>}
-            {columnVisibility.start && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.start }}>
-              {task.start.toLocaleDateString("ja-JP")}
-            </div>}
-            {columnVisibility.end && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.end }}>
-              {task.end.toLocaleDateString("ja-JP")}
-            </div>}
-            {columnVisibility.kosu && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.kosu }}>{task.kosu}</div>}
-            {columnVisibility.status && <div className="flex items-center justify-center h-full border-l" style={{ width: columnWidths.status }}>{task.status}</div>}
+            {columnVisibility.tanto && (
+              <div
+                className="flex items-center justify-center h-full"
+                style={{ width: columnWidths.tanto }}
+              >
+                {task.tanto}
+              </div>
+            )}
+            {columnVisibility.start && (
+              <div
+                className="flex items-center justify-center h-full border-l"
+                style={{ width: columnWidths.start }}
+              >
+                {task.start.toLocaleDateString("ja-JP")}
+              </div>
+            )}
+            {columnVisibility.end && (
+              <div
+                className="flex items-center justify-center h-full border-l"
+                style={{ width: columnWidths.end }}
+              >
+                {task.end.toLocaleDateString("ja-JP")}
+              </div>
+            )}
+            {columnVisibility.kosu && (
+              <div
+                className="flex items-center justify-center h-full border-l"
+                style={{ width: columnWidths.kosu }}
+              >
+                {task.kosu.toFixed(2)}
+              </div>
+            )}
+            {columnVisibility.status && (
+              <div
+                className="flex items-center justify-center h-full border-l"
+                style={{ width: columnWidths.status }}
+              >
+                {task.status}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -337,98 +389,90 @@ export default function GanttChartV2({ projectId}: { projectId: string}) {
 
   return (
     <div className="w-full h-screen p-4 bg-gray-100 font-sans">
-      <h1 className="text-2xl font-bold mb-4 text-gray-800">
-        {projectId}
-      </h1>
-      <div className="flex space-x-4 mb-4">
-        <div className="space-y-2">
-          <Label htmlFor="tanto-select">担当者</Label>
-          <Select value={selectedTanto} onValueChange={setSelectedTanto}>
-            <SelectTrigger id="tanto-select">
-              <SelectValue placeholder="担当者を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全て</SelectItem>
-              {tantos.map(tanto => (
-                <SelectItem key={tanto} value={tanto}>{tanto}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="status-select">状況</Label>
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger id="status-select">
-              <SelectValue placeholder="状況を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全て</SelectItem>
-              {statuss.map(status => (
-                <SelectItem key={status} value={status}>{status}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
-      <DateTypeSelectorV2 dateType={dateType} setDateType={setDateType} />
-      <button className="px-3 py-1 text-sm font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 mb-4" onClick={() => setIsTalebeHide(!isTalebeHide)}>切り替え</button>
-      <div className="flex space-x-4 mb-4">
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="column-tanto"
-            checked={columnVisibility.tanto}
-            onCheckedChange={() => handleColumnToggle('tanto')}
+      <h1 className="text-2xl font-bold mb-4 text-gray-800">{projectId}</h1>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowControls(!showControls)}
+        className="mb-4 flex items-center"
+      >
+        {showControls ? (
+          <>
+            コントロールを隠す
+            <ChevronUp className="ml-2 h-4 w-4" />
+          </>
+        ) : (
+          <>
+            コントロールを表示
+            <ChevronDown className="ml-2 h-4 w-4" />
+          </>
+        )}
+      </Button>
+      {showControls && (
+        <div className="mb-4 p-4 bg-white rounded-lg shadow">
+          <div className="flex space-x-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="tanto-select">担当者</Label>
+              <Select value={selectedTanto} onValueChange={setSelectedTanto}>
+                <SelectTrigger id="tanto-select">
+                  <SelectValue placeholder="担当者を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全て</SelectItem>
+                  {tantos.map((tanto) => (
+                    <SelectItem key={tanto} value={tanto}>
+                      {tanto}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status-select">状況</Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger id="status-select">
+                  <SelectValue placeholder="状況を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全て</SelectItem>
+                  {statuss.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
+          <div className="flex items-center space-x-2 mb-4">
+            <Switch
+              id="table-hide"
+              checked={isTalebeHide}
+              onCheckedChange={setIsTalebeHide}
+            />
+            <Label htmlFor="table-hide">テーブル表示切り替え</Label>
+          </div>
+          <ColumnVisibilityToggle
+            columnVisibility={columnVisibility}
+            onToggle={handleColumnToggle}
           />
-          <Label htmlFor="column-tanto">担当</Label>
         </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="column-start"
-            checked={columnVisibility.start}
-            onCheckedChange={() => handleColumnToggle('start')}
-          />
-          <Label htmlFor="column-start">開始日</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="column-end"
-            checked={columnVisibility.end}
-            onCheckedChange={() => handleColumnToggle('end')}
-          />
-          <Label htmlFor="column-end">終了日</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="column-kosu"
-            checked={columnVisibility.kosu}
-            onCheckedChange={() => handleColumnToggle('kosu')}
-          />
-          <Label htmlFor="column-kosu">工数</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="column-status"
-            checked={columnVisibility.status}
-            onCheckedChange={() => handleColumnToggle('status')}
-          />
-          <Label htmlFor="column-status">状況</Label>
-        </div>
-      </div>
+      )}
       <div className="w-full bg-white border border-gray-300 rounded-lg overflow-hidden shadow-lg">
         <Gantt
           tasks={tasks}
           viewMode={viewMode}
           viewDate={new Date()}
-          // columnWidth={}
-          listCellWidth={(isTalebeHide ? "100" : "")}
-          // ganttHeight={0}
+          listCellWidth={isTalebeHide ? "100" : ""}
+          fontSize="12px"
+          rowHeight={30}
           barFill={95}
           preStepsCount={100}
           locale="ja-JP"
           TaskListHeader={TaskListHeader}
           TaskListTable={TaskListTable}
-          TooltipContent={({ task }:{task: CustomTask}) => (
+          TooltipContent={({ task }: { task: CustomTask }) => (
             <div className="p-2 bg-white rounded shadow-md">
               <h3 className="font-bold">{task.name}</h3>
               <p>開始: {formatDate(task.start)}</p>
