@@ -87,7 +87,7 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
           } as CustomTask);
         }
       });
-      return customTasks;
+      return customTasks.sort((a, b) => a.rowNo - b.rowNo);
     default:
       const tasks = wbsTasks.map((wbsTask) => {
         let start: Date, end: Date;
@@ -197,13 +197,13 @@ export default function GanttChartV2({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     if (apiTasks.length > 0) {
-      const transformedTasks = transformTasks(apiTasks, dateType);
-      const filteredTasks = transformedTasks.filter(
+      const filteredTasks = apiTasks.filter(
         (task) =>
           (selectedTanto === "all" || task.tanto === selectedTanto) &&
           (selectedStatus === "all" || task.status === selectedStatus)
       );
-      setTasks(filteredTasks);
+      const transformedTasks = transformTasks(filteredTasks, dateType);
+      setTasks(transformedTasks);
     }
   }, [dateType, apiTasks, selectedTanto, selectedStatus]);
 
