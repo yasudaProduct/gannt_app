@@ -16,7 +16,7 @@ export default function handler(
     task: `Task ${index + 1}`,
     kinoSbt: ['Software', 'Hardware'][index % 2],
     subsystem: `Subsystem ${String.fromCharCode(65 + (index % 5))}`, // Subsystem A ~ Subsystem E
-    tanto: ['八奈見', '焼塩', '小鞠', '月之木', '玉木'][index % 5],
+    tanto: ['山田', '斎藤', '本木', '西村', '堀江'][index % 5],
     tantoRev: `Rev ${String.fromCharCode(65 + (index % 3))}`, // Rev A ~ Rev C
     kijunStartDate: `2024-0${index % 12 + 1}-01`,
     kijunEndDate: `2024-0${index % 12 + 1}-10`,
@@ -27,7 +27,7 @@ export default function handler(
     yoteiKosu: 40 + index % 10,
     jissekiStartDate: index % 2 === 0 ? `2024-0${index % 12 + 1}-02` : null,
     jissekiEndDate: index % 2 === 0 ? `2024-0${index % 12 + 1}-09` : null,
-    jissekiKosu: index % 2 === 0 ? 30 + index % 10 : 0,
+    jissekiKosu: 100,//index % 2 === 0 ? 30 + index % 10 : 0,
     status: ['未着手', '着手中', '完了'][index % 3],
     progress_Rate: [0, 50, 100][index % 3]
   }));

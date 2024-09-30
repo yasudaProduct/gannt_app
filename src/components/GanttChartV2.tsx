@@ -29,6 +29,9 @@ interface CustomTask extends Task {
   kosu: number;
   status: Status;
   dateType: DateType;
+  yoteiStartDate?: Date;
+  yoteiEndDate?: Date;
+  yoteiKosu?: number;
 }
 
 const fetchTasks = async (projectId: string): Promise<Wbs[]> => {
@@ -49,9 +52,10 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
       const customTasks: CustomTask[] = [];
       wbsTasks.map((wbsTask) => {
         for (let i = 1; i <= 2; i++) {
+          const yoteiKosu = wbsTask.yoteiKosu;
           customTasks.push({
             id: wbsTask.id.toString(),
-            name: wbsTask.task,
+            name: i == 1 ? "【予定】" + wbsTask.task : "【実績】",
             start:
               i == 1
                 ? new Date(wbsTask.yoteiStartDate)
@@ -63,17 +67,23 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
             progress: 0,
             type: "task",
             isDisabled: false,
-            styles: {
-              progressColor: "#0080ff",
-              progressSelectedColor: "#0080ff",
-            },
+            styles:
+              i == 1
+                ? { progressColor: "#0080ff", progressSelectedColor: "#0080ff" }
+                : {
+                    backgroundColor: "#6495ed",
+                    backgroundSelectedColor: "#6495ed",
+                  },
             project: wbsTask.phase,
             rowNo: wbsTask.rowNo,
-            wbsId: wbsTask.wbsId,
+            wbsId: i == 1 ? wbsTask.wbsId : "",
             tanto: wbsTask.tanto,
             kosu: i == 1 ? wbsTask.yoteiKosu : wbsTask.jissekiKosu,
             status: wbsTask.status,
-            dateType: i == 1 ? 'yotei' : 'jisseki',
+            dateType: i == 1 ? "yotei" : "jisseki",
+            yoteiStartDate: i == 2 ? new Date(wbsTask.yoteiStartDate) : null,
+            yoteiEndDate: i == 2 ? new Date(wbsTask.yoteiEndDate) : null,
+            yoteiKosu: i == 2 ? yoteiKosu : null,
           } as CustomTask);
         }
       });
@@ -208,9 +218,9 @@ export default function GanttChartV2({ projectId }: { projectId: string }) {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("ja-JP", {
       year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+      month: "2-digit",
+      day: "2-digit",
+    }).replace('-', /\//g);
   };
 
   const columnWidths = {
@@ -300,7 +310,12 @@ export default function GanttChartV2({ projectId }: { projectId: string }) {
           <div
             key={task.id}
             className="flex items-center gap-4 px-4 border-b border-gray-200 text-sm"
-            style={{ height: rowHeight, fontSize: fontSize, backgroundColor: task.dateType === "yotei" ? "#e6e6fa" : "#dda0dd" }}
+            style={{
+              height: rowHeight,
+              fontSize: fontSize,
+              backgroundColor:
+                task.dateType === "yotei" ? "#f8f8ff" : "#fffaf0",
+            }}
           >
             <div
               className="truncate _nI1Xw"
@@ -336,23 +351,41 @@ export default function GanttChartV2({ projectId }: { projectId: string }) {
             {columnVisibility.start && (
               <div
                 className="flex items-center justify-center h-full border-l"
-                style={{ width: columnWidths.start }}
+                style={{
+                  width: columnWidths.start,
+                  color:
+                    task.dateType === "jisseki" && task.yoteiStartDate! < task.start
+                      ? "#ff6347"
+                      : "fffffff",
+                }}
               >
-                {task.start.toLocaleDateString("ja-JP")}
+                {formatDate(task.start)}
               </div>
             )}
             {columnVisibility.end && (
               <div
                 className="flex items-center justify-center h-full border-l"
-                style={{ width: columnWidths.end }}
+                style={{
+                  width: columnWidths.end,
+                  color:
+                    task.dateType === "jisseki" && task.yoteiEndDate! < task.end
+                      ? "#ff6347"
+                      : "fffffff",
+                }}
               >
-                {task.end.toLocaleDateString("ja-JP")}
+                {formatDate(task.end)}
               </div>
             )}
             {columnVisibility.kosu && (
               <div
                 className="flex items-center justify-center h-full border-l"
-                style={{ width: columnWidths.kosu }}
+                style={{
+                  width: columnWidths.kosu,
+                  color:
+                    task.dateType === "jisseki" && task.yoteiKosu! < task.kosu
+                      ? "#ff6347"
+                      : "fffffff",
+                }}
               >
                 {task.kosu.toFixed(2)}
               </div>
