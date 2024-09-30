@@ -209,6 +209,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
     status: true,
   });
   const [showControls, setShowControls] = useState(true);
+  const [showAllTasks, setShowAllTasks] = useState(true);
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -257,6 +258,16 @@ export default function GanttChart({ projectId }: { projectId: string }) {
 
   const handleExpanderClick = (task: CustomTask) => {
     setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
+  };
+
+  const toggleAllTasks = () => {
+    setShowAllTasks(!showAllTasks);
+    setTasks(tasks.map(task => {
+      if (task.type === 'project') {
+        return { ...task, hideChildren: showAllTasks };
+      }
+      return task;
+    }));
   };
 
   const handleColumnToggle = (column: keyof ColumnVisibility) => {
@@ -358,7 +369,12 @@ export default function GanttChart({ projectId }: { projectId: string }) {
           <div
             key={task.id}
             className="flex items-center gap-4 px-4 border-b border-gray-200 text-sm"
-            style={{ height: rowHeight, fontSize: fontSize, backgroundColor: task.type === "project" ? "#f0f0f0" : "" }}
+            style={{
+              height: rowHeight,
+              fontSize: fontSize,
+              backgroundColor: task.type === "project" ? "#f0f0f0" : "",
+              display: task.type === "task" && !showAllTasks ? "none" : "flex",
+            }}
           >
             <div
               className="truncate _nI1Xw"
@@ -369,7 +385,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
                   className="_2QjE6"
                   onClick={() => onExpanderClick(task)}
                 >
-                  ⚪︎
+                  {task.hideChildren ? "▶" : "▼"}
                 </button>
               ) : (
                 <div>　</div>
@@ -511,6 +527,14 @@ export default function GanttChart({ projectId }: { projectId: string }) {
               onCheckedChange={setIsTalebeHide}
             />
             <Label htmlFor="table-hide">テーブル表示切り替え</Label>
+          </div>
+          <div className="flex items-center space-x-2 mb-4">
+            <Switch
+              id="show-all-tasks"
+              checked={showAllTasks}
+              onCheckedChange={toggleAllTasks}
+            />
+            <Label htmlFor="show-all-tasks">すべてのタスクを表示</Label>
           </div>
           <ColumnVisibilityToggle
             columnVisibility={columnVisibility}
