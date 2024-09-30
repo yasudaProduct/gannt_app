@@ -7,9 +7,6 @@ export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    console.log(process.env.NEXT_PUBLIC_API_URL)
-    // リクエストヘッダーにAccess-Control-Allow-Originを追加する
-
     const url = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL + `/api/projects` : '/api/projects'
     fetch(url,{
       method: 'GET',
@@ -28,6 +25,8 @@ export default function Home() {
         {projects.map((project) => (
           <li key={project.projectId}>
             <Link href={{ pathname: "/gannt-chart", query: {projectId: project.projectId}}}>{project.projectName}</Link>
+                
+            <Link href={{ pathname: "/gannt-chartv2", query: {projectId: project.projectId}}}>{project.projectName}</Link>
           </li>
         ))}
       </ul>

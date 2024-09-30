@@ -9,6 +9,7 @@ import { Status } from "@/types/ScheduleMode";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Switch } from "./ui/switch";
+import { DateTypeSelectorV2 } from "./DateTypeButtonV2";
 
 interface CustomTask extends Task { 
   wbsId: string;
@@ -16,6 +17,7 @@ interface CustomTask extends Task {
   tanto: string;
   kosu: number;
   status: Status;
+  dateType: DateType;
 }
 
 const fetchTasks = async (projectId: string): Promise<Wbs[]> => {
@@ -28,157 +30,124 @@ const fetchTasks = async (projectId: string): Promise<Wbs[]> => {
 }
 
 const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
-  const projects = wbsTasks.reduce(
-    (acc: { [phase: string]: CustomTask }, wbsTask: Wbs) => {
-      let start: Date, end: Date;
-      let kosu: number;
-      const status: Status = wbsTask.status == '' ? '未着手' : wbsTask.status as Status;
-
-      switch (dateType) {
-        case "kijun":
-          start = new Date(wbsTask.kijunStartDate);
-          end = new Date(wbsTask.kijunEndDate);
-          kosu = wbsTask.kijunKosu;
-          break;
-        case "yotei":
-          start = new Date(wbsTask.yoteiStartDate);
-          end = new Date(wbsTask.yoteiEndDate);
-          kosu = wbsTask.yoteiKosu;
-          break;
-        case "jisseki":
-          start = wbsTask.jissekiStartDate
-            ? new Date(wbsTask.jissekiStartDate)
-            : new Date(wbsTask.yoteiStartDate);
-          end = wbsTask.jissekiEndDate
-            ? new Date(wbsTask.jissekiEndDate)
-            : new Date(wbsTask.yoteiEndDate);
-          kosu = wbsTask.jissekiKosu;
-          break;
-      }
-
-      const phase = wbsTask.phase;
-
-      if (!acc[phase]) {
-        acc[phase] = {
-          id: wbsTask.phase,
-          name: wbsTask.phase,
-          wbsId: wbsTask.wbsId,
-          tanto: "",
-          progress: 0,
-          type: "project",
-          hideChildren: false,
-          isDisabled: false,
-          start: start,
-          end: end,
-          rowNo: wbsTask.rowNo,
-          kosu: kosu,
-          status: status
-        };
-      } else {
-        acc[phase].kosu += kosu;
-
-        // すべて未着手であれば未着手とする
-        // すべて完了であれば完了とする
-        // それ以外は進行中とする
-        if (acc[phase].status === '未着手' && status !== '未着手') {
-          acc[phase].status = '着手中';
-        }
-        if (acc[phase].status === '着手中' && status === '完了') {
-          acc[phase].status = '着手中';
-        }
-        if (acc[phase].status === '完了' && status !== '完了') {
-          acc[phase].status = '着手中';
-        }
-        
-        if (end) {
-          if (
-            !acc[phase].end ||
-            end > acc[phase].end
-          ) {
-            acc[phase].end = end;
-          }
-        }
-        if (start) {
-          if (
-            !acc[phase].start ||
-            start < acc[phase].start
-          ) {
-            acc[phase].start = start;
-          }
-        }
-      }
-
-      return acc;
-    },
-    {}
-  );
-
-  const tasks = wbsTasks.map((wbsTask) => {
-    let start: Date, end: Date;
-    let kosu: number;
+  let tasks: CustomTask[] = [];
+  wbsTasks.map((wbsTask) => {
     const status: Status = wbsTask.status == '' ? '未着手' : wbsTask.status as Status;
 
-    switch (dateType) {
-      case "kijun":
-        start = new Date(wbsTask.kijunStartDate);
-        end = new Date(wbsTask.kijunEndDate);
-        kosu = wbsTask.kijunKosu;
-        break;
-      case "yotei":
-        start = new Date(wbsTask.yoteiStartDate);
-        end = new Date(wbsTask.yoteiEndDate);
-        kosu = wbsTask.yoteiKosu;
-        break;
-      case "jisseki":
-        start = wbsTask.jissekiStartDate
-          ? new Date(wbsTask.jissekiStartDate)
-          : new Date(wbsTask.yoteiStartDate);
-        end = wbsTask.jissekiEndDate
-          ? new Date(wbsTask.jissekiEndDate)
-          : new Date(wbsTask.yoteiEndDate);
-        kosu = wbsTask.jissekiKosu;
-        break;
-    }
+    // 予定、実績のタスクを作成する
+    if (dateType === "kijun") {
+      for (let i = 1; i <= 2; i++) {
+        let start: Date, end: Date;
+        let kosu: number;
 
-    const progress = wbsTask.jissekiKosu / kosu * 100
-    return {
-      id: wbsTask.id.toString(),
-      name: wbsTask.task,
-      start,
-      end,
-      progress: progress,
-      type: "task",
-      isDisabled: false,
-      styles:
-        progress > 100
-          ? { progressColor: "#ff2b00", progressSelectedColor: "#ff2b00" }
-          : { progressColor: "#0080ff", progressSelectedColor: "#0080ff" },
-      project: wbsTask.phase,
-      // phase: wbsTask.phase,
-      // activity: wbsTask.activity,
-      rowNo: wbsTask.rowNo,
-      wbsId: wbsTask.wbsId,
-      tanto: wbsTask.tanto,
-      kosu: kosu,
-      status: status,
-    } as CustomTask;
+        switch (i) {
+          case 1:
+            start = new Date(wbsTask.yoteiStartDate);
+            end = new Date(wbsTask.yoteiEndDate);
+            kosu = wbsTask.yoteiKosu;
+            break;
+          case 2:
+            start = wbsTask.jissekiStartDate
+              ? new Date(wbsTask.jissekiStartDate)
+              : new Date(wbsTask.yoteiStartDate);
+            end = wbsTask.jissekiEndDate
+              ? new Date(wbsTask.jissekiEndDate)
+              : new Date(wbsTask.yoteiEndDate);
+            kosu = wbsTask.jissekiKosu;
+            break;
+          default:
+            throw new Error("Invalid case value");
+        }
+
+        let progress = wbsTask.jissekiKosu / kosu * 100;
+        tasks.push({
+          id: wbsTask.id.toString(),
+          name: wbsTask.task,
+          start,
+          end,
+          progress: progress,
+          type: "task",
+          isDisabled: false,
+          styles:
+            i == 1
+              ? { backgroundColor: "#ff2b00", backgroundSelectedColor: "#ff2b00" }
+              : { backgroundColor: "#0080ff", backgroundSelectedColor: "#0080ff" },
+          project: wbsTask.phase,
+          // phase: wbsTask.phase,
+          // activity: wbsTask.activity,
+          rowNo: wbsTask.rowNo,
+          wbsId: wbsTask.wbsId,
+          tanto: wbsTask.tanto,
+          kosu: kosu,
+          status: status,
+          dateType: i == 1 ? "yotei" : "jisseki",
+        } as CustomTask
+        );
+      }
+    } else if (dateType === 'yotei'){
+      let start = new Date(wbsTask.yoteiStartDate);
+      let end = new Date(wbsTask.yoteiEndDate);
+      let kosu = wbsTask.yoteiKosu;
+      let progress = wbsTask.jissekiKosu / kosu * 100;
+
+      tasks.push({
+        id: wbsTask.id.toString(),
+        name: wbsTask.task,
+        start,
+        end,
+        progress: progress,
+        type: "task",
+        isDisabled: false,
+        styles: { progressColor: "#0080ff", progressSelectedColor: "#0080ff" },
+        project: wbsTask.phase,
+        // phase: wbsTask.phase,
+        // activity: wbsTask.activity,
+        rowNo: wbsTask.rowNo,
+        wbsId: wbsTask.wbsId,
+        tanto: wbsTask.tanto,
+        kosu: kosu,
+        status: status,
+        dateType: dateType
+      } as CustomTask
+      );
+    }else{
+      let start = wbsTask.jissekiStartDate
+        ? new Date(wbsTask.jissekiStartDate)
+        : new Date(wbsTask.yoteiStartDate);
+      let end = wbsTask.jissekiEndDate
+        ? new Date(wbsTask.jissekiEndDate)
+        : new Date(wbsTask.yoteiEndDate);
+      let kosu = wbsTask.jissekiKosu;
+
+      tasks.push({
+        id: wbsTask.id.toString(),
+        name: wbsTask.task,
+        start,
+        end,
+        progress: 0,
+        type: "task",
+        isDisabled: false,
+        styles: { progressColor: "#0080ff", progressSelectedColor: "#0080ff" },
+        project: wbsTask.phase,
+        // phase: wbsTask.phase,
+        // activity: wbsTask.activity,
+        rowNo: wbsTask.rowNo,
+        wbsId: wbsTask.wbsId,
+        tanto: wbsTask.tanto,
+        kosu: kosu,
+        status: status,
+        dateType: dateType
+      } as CustomTask
+      );
+    }
   });
 
+
   // rowNoの昇順でソート
-  return Object.values(projects)
-    .concat(Object.values(tasks))
-    .sort((a, b) => {
-      if (a.rowNo < b.rowNo) {
-        return -1;
-      }
-      if (a.rowNo > b.rowNo) {
-        return 1;
-      }
-      return 0;
-    });
+  return tasks.sort((a, b) => a.rowNo - b.rowNo);
 }
 
-export default function GanttChart({ projectId}: { projectId: string}) {
+export default function GanttChartV2({ projectId}: { projectId: string}) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [dateType, setDateType] = useState<DateType>("yotei");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -240,7 +209,7 @@ export default function GanttChart({ projectId}: { projectId: string}) {
       );
       setTasks(filteredTasks);
     }
-  }, [dateType, apiTasks, selectedTanto]);
+  }, [dateType, apiTasks, selectedTanto, selectedStatus]);
 
   const handleExpanderClick = (task: CustomTask) => {
     setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
@@ -402,7 +371,7 @@ export default function GanttChart({ projectId}: { projectId: string}) {
         </div>
       </div>
       <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
-      <DateTypeSelector dateType={dateType} setDateType={setDateType} />
+      <DateTypeSelectorV2 dateType={dateType} setDateType={setDateType} />
       <button className="px-3 py-1 text-sm font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 mb-4" onClick={() => setIsTalebeHide(!isTalebeHide)}>切り替え</button>
       <div className="flex space-x-4 mb-4">
         <div className="flex items-center space-x-2">
