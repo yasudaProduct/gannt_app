@@ -188,6 +188,8 @@ export default function GanttChart({ projectId}: { projectId: string}) {
   const [error, setError] = useState<string | null>(null);  
   const [selectedTanto, setSelectedTanto] = useState<string>("all");
   const [tantos, setTantos] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [statuss, setStatus] = useState<string[]>([]);
   const [columnVisibility, setColumnVisibility] = useState({
     tanto: true,
     start: true,
@@ -209,9 +211,13 @@ export default function GanttChart({ projectId}: { projectId: string}) {
         const transformedTasks = transformTasks(apiTasks, dateType);
         setTasks(transformedTasks);
 
-        // プロジェクトと担当者のリストを作成
+        // 担当者のリストを作成
         const tantoSet = new Set(apiTasks.map(task => task.tanto));
         setTantos(Array.from(tantoSet));
+
+        // 状況のリストを作成
+        const statusSet = new Set(transformedTasks.map(task => task.status));
+        setStatus(Array.from(statusSet));
 
         setError(null);
       } catch (error) {
@@ -229,7 +235,8 @@ export default function GanttChart({ projectId}: { projectId: string}) {
     if (apiTasks.length > 0) {
       const transformedTasks = transformTasks(apiTasks, dateType);
       const filteredTasks = transformedTasks.filter(task =>
-        (selectedTanto === "all" || task.tanto === selectedTanto)
+        (selectedTanto === "all" || task.tanto === selectedTanto) &&
+        (selectedStatus === "all" || task.status === selectedStatus)
       );
       setTasks(filteredTasks);
     }
@@ -375,6 +382,20 @@ export default function GanttChart({ projectId}: { projectId: string}) {
               <SelectItem value="all">全て</SelectItem>
               {tantos.map(tanto => (
                 <SelectItem key={tanto} value={tanto}>{tanto}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="status-select">状況</Label>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <SelectTrigger id="status-select">
+              <SelectValue placeholder="状況を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全て</SelectItem>
+              {statuss.map(status => (
+                <SelectItem key={status} value={status}>{status}</SelectItem>
               ))}
             </SelectContent>
           </Select>
