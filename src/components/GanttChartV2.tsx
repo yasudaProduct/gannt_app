@@ -4,7 +4,7 @@ import { Gantt, Task, ViewMode } from "gantt-task-react";
 import React, { useEffect, useState } from "react";
 import { Wbs } from "@/types/Wbs";
 import { DateType, DateTypeSelector } from "./DateTypeButton";
-import { ViewModeButtons } from "./viewModeButton";
+import { ViewModeButtons } from "./ViewModeButton";
 import { Status } from "@/types/ScheduleMode";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
