@@ -256,8 +256,15 @@ export default function GanttChart({ projectId }: { projectId: string }) {
     }
   }, [dateType, apiTasks, selectedTanto, selectedStatus]);
 
-  const handleExpanderClick = (task: CustomTask) => {
-    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
+  const handleExpanderClick = (task: Task) => {
+    console.log('handleExpanderClick');
+    setTasks(tasks.map(t => {
+      if (t.id === task.id) {
+        console.log(t);
+        return { ...t, hideChildren: task.hideChildren };
+      }
+      return t;
+    }));
   };
 
   const toggleAllTasks = () => {
@@ -359,7 +366,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
     tasks: CustomTask[];
     selectedTaskId: string;
     setSelectedTask: (taskId: string) => void;
-    onExpanderClick: (task: CustomTask) => void;
+    onExpanderClick: (task: Task) => void;
     expanderFlg: boolean;
   }> = ({ tasks, rowHeight, fontSize, onExpanderClick }) => {
 
@@ -373,7 +380,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
               height: rowHeight,
               fontSize: fontSize,
               backgroundColor: task.type === "project" ? "#f0f0f0" : "",
-              display: task.type === "task" && !showAllTasks ? "none" : "flex",
+              // display: task.type === "task" && !showAllTasks ? "none" : "flex",
             }}
           >
             <div
