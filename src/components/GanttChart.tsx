@@ -249,8 +249,11 @@ export default function GanttChart({ projectId }: { projectId: string }) {
       const transformedTasks = transformTasks(apiTasks, dateType);
       const filteredTasks = transformedTasks.filter(
         (task) =>
-          (selectedTanto === "all" || task.tanto === selectedTanto) &&
-          (selectedStatus === "all" || task.status === selectedStatus)
+          (task.type === "project") ||
+          (
+            (selectedTanto === "all" || task.tanto === selectedTanto) &&
+            (selectedStatus === "all" || task.status === selectedStatus)
+          )
       );
       setTasks(filteredTasks);
     }
@@ -380,7 +383,6 @@ export default function GanttChart({ projectId }: { projectId: string }) {
               height: rowHeight,
               fontSize: fontSize,
               backgroundColor: task.type === "project" ? "#f0f0f0" : "",
-              // display: task.type === "task" && !showAllTasks ? "none" : "flex",
             }}
           >
             <div
