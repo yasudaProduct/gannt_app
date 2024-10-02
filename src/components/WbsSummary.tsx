@@ -123,10 +123,10 @@ export default function WbsSummary({ projectId }: { projectId: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Phase</TableHead>
-                  <TableHead className="text-right">Planned Effort ({getUnitLabel(timeUnit)})</TableHead>
-                  <TableHead className="text-right">Actual Effort ({getUnitLabel(timeUnit)})</TableHead>
-                  <TableHead className="text-right">Difference ({getUnitLabel(timeUnit)})</TableHead>
+                  <TableHead>工程</TableHead>
+                  <TableHead className="text-right">予定 ({getUnitLabel(timeUnit)})</TableHead>
+                  <TableHead className="text-right">実績 ({getUnitLabel(timeUnit)})</TableHead>
+                  <TableHead className="text-right">予定-実績 ({getUnitLabel(timeUnit)})</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
