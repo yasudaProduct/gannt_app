@@ -51,6 +51,8 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
     case "kijun":
       const customTasks: CustomTask[] = [];
       wbsTasks.map((wbsTask) => {
+        const status: Status = wbsTask.status == "" ? "未着手" : (wbsTask.status as Status);
+        const progress = (wbsTask.jissekiKosu / wbsTask.yoteiKosu) * 100;
         for (let i = 1; i <= 2; i++) {
           const yoteiKosu = wbsTask.yoteiKosu;
           customTasks.push({
@@ -64,22 +66,24 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
               i == 1
                 ? new Date(wbsTask.yoteiEndDate)
                 : new Date(wbsTask.jissekiEndDate ?? wbsTask.yoteiEndDate),
-            progress: 0,
+            progress: i == 1 ? 0 : progress,
             type: "task",
             isDisabled: false,
             styles:
               i == 1
                 ? { progressColor: "#0080ff", progressSelectedColor: "#0080ff" }
                 : {
-                    backgroundColor: "#6495ed",
-                    backgroundSelectedColor: "#6495ed",
-                  },
+                  progressColor: "#6495ed",
+                  progressSelectedColor: "#6495ed",
+                  // backgroundColor: "#6495ed",
+                  // backgroundSelectedColor: "#6495ed",
+                },
             project: wbsTask.phase,
             rowNo: wbsTask.rowNo,
             wbsId: i == 1 ? wbsTask.wbsId : "",
             tanto: wbsTask.tanto,
             kosu: i == 1 ? wbsTask.yoteiKosu : wbsTask.jissekiKosu,
-            status: wbsTask.status,
+            status: status,
             dateType: i == 1 ? "yotei" : "jisseki",
             yoteiStartDate: i == 2 ? new Date(wbsTask.yoteiStartDate) : null,
             yoteiEndDate: i == 2 ? new Date(wbsTask.yoteiEndDate) : null,
@@ -182,6 +186,7 @@ export default function GanttChartV2({ projectId }: { projectId: string }) {
         // 状況のリストを作成
         const statusSet = new Set(transformedTasks.map((task) => task.status));
         setStatus(Array.from(statusSet));
+        console.log(transformedTasks);
 
         setError(null);
       } catch (error) {
