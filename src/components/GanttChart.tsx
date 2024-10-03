@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Switch } from "./ui/switch";
-import { ViewModeButtons } from "./viewModeButton";
+import { ViewModeButtons } from "./ViewModeButton";
 import {
   ColumnVisibility,
   ColumnVisibilityToggle,
@@ -28,6 +28,12 @@ interface CustomTask extends Task {
   tanto: string;
   kosu: number;
   status: Status;
+  yoteiStartDate?: Date;
+  yoteiEndDate?: Date;
+  yoteiKosu?: number;
+  jissekiStartDate?: Date;
+  jissekiEndDate?: Date;
+  jissekiKosu?: number;
 }
 
 const fetchTasks = async (projectId: string): Promise<Wbs[]> => {
@@ -89,6 +95,12 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
           rowNo: wbsTask.rowNo,
           kosu: kosu,
           status: status,
+          yoteiStartDate: new Date(wbsTask.yoteiStartDate),
+          yoteiEndDate: new Date(wbsTask.yoteiEndDate),
+          yoteiKosu: wbsTask.yoteiKosu,
+          jissekiStartDate: wbsTask.jissekiStartDate != null ? new Date(wbsTask.jissekiStartDate!) : undefined,
+          jissekiEndDate: wbsTask.jissekiEndDate != null ? new Date(wbsTask.jissekiEndDate!) : undefined,
+          jissekiKosu: wbsTask.jissekiKosu,
         };
       } else {
         acc[phase].kosu += kosu;
@@ -172,6 +184,18 @@ const transformTasks = (wbsTasks: Wbs[], dateType: DateType): CustomTask[] => {
       tanto: wbsTask.tanto,
       kosu: kosu,
       status: status,
+      yoteiStartDate: new Date(wbsTask.yoteiStartDate),
+      yoteiEndDate: new Date(wbsTask.yoteiEndDate),
+      yoteiKosu: wbsTask.yoteiKosu,
+      jissekiStartDate:
+        wbsTask.jissekiStartDate != null
+          ? new Date(wbsTask.jissekiStartDate!)
+          : undefined,
+      jissekiEndDate:
+        wbsTask.jissekiEndDate != null
+          ? new Date(wbsTask.jissekiEndDate!)
+          : undefined,
+      jissekiKosu: wbsTask.jissekiKosu,
     } as CustomTask;
   });
 
@@ -202,6 +226,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [statuss, setStatus] = useState<string[]>([]);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
+    wbsno: true,
     tanto: true,
     start: true,
     end: true,
@@ -315,7 +340,14 @@ export default function GanttChart({ projectId }: { projectId: string }) {
         style={{ height: headerHeight }}
       >
         <div style={{ width: columnWidths.task }}>タスク名</div>
-        <div style={{ width: columnWidths.wbsId }}>WBSNO</div>
+        {columnVisibility.wbsno && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.wbsId }}
+          >
+            WBSNO
+          </div>
+        )}
         {columnVisibility.tanto && (
           <div
             className="flex items-center justify-center h-full"
@@ -402,11 +434,12 @@ export default function GanttChart({ projectId }: { projectId: string }) {
               <div>{task.name}</div>
             </div>
 
-            {task.type !== "project" ? (
-              <div style={{ width: columnWidths.wbsId }}>{task.wbsId}</div>
-            ) : (
-              <div style={{ width: columnWidths.wbsId }}></div>
-            )}
+            {columnVisibility.wbsno &&
+              (task.type !== "project" ? (
+                <div style={{ width: columnWidths.wbsId }}>{task.wbsId}</div>
+              ) : (
+                <div style={{ width: columnWidths.wbsId }}></div>
+              ))}
 
             {columnVisibility.tanto && (
               <div
@@ -421,7 +454,11 @@ export default function GanttChart({ projectId }: { projectId: string }) {
                 className="flex items-center justify-center h-full border-l"
                 style={{ width: columnWidths.start }}
               >
-                {task.start.toLocaleDateString("ja-JP")}
+                [予]{task.yoteiStartDate!.toLocaleDateString("ja-JP")}
+                <br></br>
+                {task.jissekiStartDate != null
+                  ? "[実]" + task.jissekiStartDate!.toLocaleDateString("ja-JP")
+                  : ""}
               </div>
             )}
             {columnVisibility.end && (
@@ -429,7 +466,11 @@ export default function GanttChart({ projectId }: { projectId: string }) {
                 className="flex items-center justify-center h-full border-l"
                 style={{ width: columnWidths.end }}
               >
-                {task.end.toLocaleDateString("ja-JP")}
+                [予]{task.yoteiEndDate!.toLocaleDateString("ja-JP")}
+                <br></br>
+                {task.jissekiEndDate != null
+                  ? "[実]" + task.jissekiEndDate!.toLocaleDateString("ja-JP")
+                  : ""}
               </div>
             )}
             {columnVisibility.kosu && (
@@ -437,7 +478,11 @@ export default function GanttChart({ projectId }: { projectId: string }) {
                 className="flex items-center justify-center h-full border-l"
                 style={{ width: columnWidths.kosu }}
               >
-                {task.kosu.toFixed(2)}
+                [予]{task.kosu.toFixed(2)}
+                <br></br>
+                {task.jissekiKosu != null
+                  ? "[実]" + task.jissekiKosu.toFixed(2)
+                  : ""}
               </div>
             )}
             {columnVisibility.status && (
@@ -528,7 +573,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
             </div>
           </div>
           <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
-          <DateTypeSelector dateType={dateType} setDateType={setDateType} />
+          {/* <DateTypeSelector dateType={dateType} setDateType={setDateType} /> */}
           <div className="flex items-center space-x-2 mb-4">
             <Switch
               id="table-hide"
@@ -558,7 +603,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
           viewDate={new Date()}
           listCellWidth={isTalebeHide ? "100" : ""}
           fontSize="12px"
-          rowHeight={30}
+          rowHeight={45}
           barFill={95}
           preStepsCount={100}
           locale="ja-JP"

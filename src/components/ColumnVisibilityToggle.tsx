@@ -2,6 +2,7 @@ import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 
 export interface ColumnVisibility {
+  wbsno: boolean;
   tanto: boolean;
   start: boolean;
   end: boolean;
@@ -20,6 +21,14 @@ export function ColumnVisibilityToggle({
 }: ColumnVisibilityToggleProps) {
   return (
     <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="column-wbsno"
+          checked={columnVisibility.wbsno}
+          onCheckedChange={() => onToggle("wbsno")}
+        />
+        <Label htmlFor="column-wbsno">WBSNO</Label>
+      </div>
       <div className="flex items-center space-x-2">
         <Switch
           id="column-tanto"
