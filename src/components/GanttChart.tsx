@@ -404,6 +404,18 @@ export default function GanttChart({ projectId }: { projectId: string }) {
     onExpanderClick: (task: Task) => void;
     expanderFlg: boolean;
   }> = ({ tasks, rowHeight, fontSize, onExpanderClick }) => {
+    const isDateLater = (date1: Date | undefined, date2: Date | undefined) => {
+      if (!date1 || !date2) return false;
+      return date1 > date2;
+    };
+
+    const isKosuGreater = (
+      kosu1: number | undefined,
+      kosu2: number | undefined
+    ) => {
+      if (kosu1 === undefined || kosu2 === undefined) return false;
+      return kosu1 > kosu2;
+    };
 
     return (
       <div className="text-xs">
@@ -451,38 +463,61 @@ export default function GanttChart({ projectId }: { projectId: string }) {
             )}
             {columnVisibility.start && (
               <div
-                className="flex items-center justify-center h-full border-l"
+                className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.start }}
               >
-                [予]{task.yoteiStartDate!.toLocaleDateString("ja-JP")}
-                <br></br>
-                {task.jissekiStartDate != null
-                  ? "[実]" + task.jissekiStartDate!.toLocaleDateString("ja-JP")
-                  : ""}
+                <div>
+                  [予]{task.yoteiStartDate?.toLocaleDateString("ja-JP")}
+                </div>
+                {task.jissekiStartDate && (
+                  <div
+                    className={
+                      isDateLater(task.jissekiStartDate, task.yoteiStartDate)
+                        ? "text-red-500"
+                        : ""
+                    }
+                  >
+                    [実]{task.jissekiStartDate.toLocaleDateString("ja-JP")}
+                  </div>
+                )}
               </div>
             )}
             {columnVisibility.end && (
               <div
-                className="flex items-center justify-center h-full border-l"
+                className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.end }}
               >
-                [予]{task.yoteiEndDate!.toLocaleDateString("ja-JP")}
-                <br></br>
-                {task.jissekiEndDate != null
-                  ? "[実]" + task.jissekiEndDate!.toLocaleDateString("ja-JP")
-                  : ""}
+                <div>[予]{task.yoteiEndDate?.toLocaleDateString("ja-JP")}</div>
+                {task.jissekiEndDate && (
+                  <div
+                    className={
+                      isDateLater(task.jissekiEndDate, task.yoteiEndDate)
+                        ? "text-red-500"
+                        : ""
+                    }
+                  >
+                    [実]{task.jissekiEndDate.toLocaleDateString("ja-JP")}
+                  </div>
+                )}
               </div>
             )}
             {columnVisibility.kosu && (
               <div
-                className="flex items-center justify-center h-full border-l"
+                className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.kosu }}
               >
-                [予]{task.kosu.toFixed(2)}
-                <br></br>
-                {task.jissekiKosu != null
-                  ? "[実]" + task.jissekiKosu.toFixed(2)
-                  : ""}
+                <div>[予]{task.yoteiKosu?.toFixed(2)}</div>
+                {task.jissekiKosu !== undefined && (
+                  <div
+                    className={
+                      isKosuGreater(task.jissekiKosu, task.yoteiKosu)
+                        ? "text-red-500"
+                        : ""
+                    }
+                  >
+                    [実]{task.jissekiKosu.toFixed(2)}
+                  </div>
+                )}
               </div>
             )}
             {columnVisibility.status && (
@@ -573,7 +608,7 @@ export default function GanttChart({ projectId }: { projectId: string }) {
             </div>
           </div>
           <ViewModeButtons viewMode={viewMode} setViewMode={setViewMode} />
-          {/* <DateTypeSelector dateType={dateType} setDateType={setDateType} /> */}
+          <DateTypeSelector dateType={dateType} setDateType={setDateType} />
           <div className="flex items-center space-x-2 mb-4">
             <Switch
               id="table-hide"
